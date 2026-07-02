@@ -4,166 +4,134 @@
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>SocialFlow – Login</title>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet"/>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet"/>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.3/dist/umd/supabase.min.js"></script>
 <style>
-  :root {
-    --bg:#0d0d14; --surface:#13131f; --surface2:#1a1a2e; --border:#252540;
-    --accent:#7c3aed; --accent2:#a855f7; --green:#10b981; --red:#ef4444;
-    --text:#e2e8f0; --muted:#64748b;
-  }
-  * { margin:0;padding:0;box-sizing:border-box; }
-  body {
-    font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);
-    min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;
-  }
-  .bg-glow {
-    position:fixed;inset:0;z-index:0;
-    background:radial-gradient(circle at 20% 20%, rgba(124,58,237,0.15), transparent 40%),
-               radial-gradient(circle at 80% 80%, rgba(168,85,247,0.12), transparent 40%);
-  }
-  .auth-card {
-    position:relative;z-index:1;width:100%;max-width:400px;background:var(--surface);
-    border:1px solid var(--border);border-radius:16px;padding:36px;
-  }
-  .logo { display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:28px; }
-  .logo-icon { width:40px;height:40px;border-radius:10px;background:linear-gradient(135deg,var(--accent),var(--accent2));display:flex;align-items:center;justify-content:center;font-size:20px; }
-  .logo-text { font-family:'Space Grotesk',sans-serif;font-size:20px;font-weight:700;color:#fff; }
-  h1 { font-size:22px;text-align:center;margin-bottom:6px; }
-  .subtitle { text-align:center;color:var(--muted);font-size:13px;margin-bottom:28px; }
-  .tabs { display:flex;background:var(--surface2);border-radius:8px;padding:4px;margin-bottom:24px; }
-  .tab { flex:1;text-align:center;padding:8px;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer;color:var(--muted);transition:all 0.15s;border:none;background:none; }
-  .tab.active { background:var(--accent);color:#fff; }
-  .form-group { margin-bottom:16px; }
-  .form-group label { display:block;font-size:12px;font-weight:500;color:var(--muted);margin-bottom:6px; }
-  .form-group input {
-    width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);
-    border-radius:8px;padding:11px 14px;font-size:14px;outline:none;transition:border-color 0.15s;
-  }
-  .form-group input:focus { border-color:var(--accent); }
-  .submit-btn {
-    width:100%;background:var(--accent);color:#fff;border:none;border-radius:8px;
-    padding:12px;font-size:14px;font-weight:600;cursor:pointer;margin-top:8px;transition:opacity 0.15s;
-  }
-  .submit-btn:hover { opacity:0.88; }
-  .submit-btn:disabled { opacity:0.5;cursor:not-allowed; }
-  .msg { font-size:13px;text-align:center;margin-top:16px;padding:10px;border-radius:8px;display:none; }
-  .msg.error { background:rgba(239,68,68,0.1);color:var(--red);display:block; }
-  .msg.success { background:rgba(16,185,129,0.1);color:var(--green);display:block; }
-  .form-panel { display:none; }
-  .form-panel.active { display:block; }
-  .footer-note { text-align:center;font-size:11px;color:var(--muted);margin-top:20px; }
+  :root{--bg:#0d0d14;--surface:#13131f;--surface2:#1a1a2e;--border:#252540;--accent:#7c3aed;--accent2:#a855f7;--green:#10b981;--red:#ef4444;--text:#e2e8f0;--muted:#64748b;}
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;}
+  .glow{position:fixed;inset:0;z-index:0;background:radial-gradient(circle at 20% 20%,rgba(124,58,237,0.15),transparent 40%),radial-gradient(circle at 80% 80%,rgba(168,85,247,0.12),transparent 40%);}
+  .card{position:relative;z-index:1;width:100%;max-width:400px;background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:36px;}
+  .logo{display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:28px;}
+  .logo-icon{width:40px;height:40px;border-radius:10px;background:linear-gradient(135deg,var(--accent),var(--accent2));display:flex;align-items:center;justify-content:center;font-size:20px;}
+  .logo-text{font-family:'Space Grotesk',sans-serif;font-size:20px;font-weight:700;color:#fff;}
+  h1{font-size:22px;text-align:center;margin-bottom:6px;}
+  .sub{text-align:center;color:var(--muted);font-size:13px;margin-bottom:28px;}
+  .tabs{display:flex;background:var(--surface2);border-radius:8px;padding:4px;margin-bottom:24px;}
+  .tab{flex:1;text-align:center;padding:8px;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer;color:var(--muted);border:none;background:none;transition:all 0.15s;}
+  .tab.active{background:var(--accent);color:#fff;}
+  .fg{margin-bottom:16px;}
+  .fg label{display:block;font-size:12px;font-weight:500;color:var(--muted);margin-bottom:6px;}
+  .fg input{width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:11px 14px;font-size:14px;outline:none;}
+  .fg input:focus{border-color:var(--accent);}
+  .btn{width:100%;background:var(--accent);color:#fff;border:none;border-radius:8px;padding:12px;font-size:14px;font-weight:600;cursor:pointer;margin-top:8px;}
+  .btn:disabled{opacity:0.6;cursor:not-allowed;}
+  .panel{display:none;}
+  .panel.active{display:block;}
+  .msg{font-size:13px;text-align:center;margin-top:16px;padding:10px;border-radius:8px;display:none;}
+  .msg.err{background:rgba(239,68,68,0.1);color:var(--red);display:block;}
+  .msg.ok{background:rgba(16,185,129,0.1);color:var(--green);display:block;}
+  .foot{text-align:center;font-size:11px;color:var(--muted);margin-top:20px;}
 </style>
 </head>
 <body>
-<div class="bg-glow"></div>
-
-<div class="auth-card">
-  <div class="logo">
-    <div class="logo-icon">⚡</div>
-    <span class="logo-text">SocialFlow</span>
-  </div>
-  <h1 id="formTitle">Welcome back</h1>
-  <p class="subtitle" id="formSubtitle">Log in to your dashboard</p>
-
+<div class="glow"></div>
+<div class="card">
+  <div class="logo"><div class="logo-icon">⚡</div><span class="logo-text">SocialFlow</span></div>
+  <h1 id="title">Welcome back</h1>
+  <p class="sub" id="sub">Log in to your dashboard</p>
   <div class="tabs">
-    <button class="tab active" id="tabLogin" onclick="switchTab('login')">Log In</button>
-    <button class="tab" id="tabSignup" onclick="switchTab('signup')">Sign Up</button>
+    <button class="tab active" onclick="show('login')">Log In</button>
+    <button class="tab" onclick="show('signup')">Sign Up</button>
   </div>
 
-  <!-- LOGIN -->
-  <div class="form-panel active" id="panelLogin">
-    <div class="form-group"><label>Email</label><input type="email" id="loginEmail" placeholder="you@company.com"/></div>
-    <div class="form-group"><label>Password</label><input type="password" id="loginPassword" placeholder="••••••••"/></div>
-    <button class="submit-btn" id="loginBtn" onclick="doLogin()">Log In</button>
+  <div class="panel active" id="pLogin">
+    <div class="fg"><label>Email</label><input type="email" id="lEmail" placeholder="you@example.com"/></div>
+    <div class="fg"><label>Password</label><input type="password" id="lPass" placeholder="••••••••"/></div>
+    <button class="btn" id="lBtn" onclick="doLogin()">Log In</button>
   </div>
 
-  <!-- SIGNUP -->
-  <div class="form-panel" id="panelSignup">
-    <div class="form-group"><label>Full Name</label><input type="text" id="signupName" placeholder="Alex Morgan"/></div>
-    <div class="form-group"><label>Email</label><input type="email" id="signupEmail" placeholder="you@company.com"/></div>
-    <div class="form-group"><label>Password</label><input type="password" id="signupPassword" placeholder="At least 6 characters"/></div>
-    <button class="submit-btn" id="signupBtn" onclick="doSignup()">Create Account</button>
+  <div class="panel" id="pSignup">
+    <div class="fg"><label>Full Name</label><input type="text" id="sName" placeholder="Your Name"/></div>
+    <div class="fg"><label>Email</label><input type="email" id="sEmail" placeholder="you@example.com"/></div>
+    <div class="fg"><label>Password (min 6 chars)</label><input type="password" id="sPass" placeholder="••••••••"/></div>
+    <button class="btn" id="sBtn" onclick="doSignup()">Create Account</button>
   </div>
 
-  <div class="msg" id="msgBox"></div>
-  <div class="footer-note">Protected by Supabase Auth · Your data is encrypted</div>
+  <div class="msg" id="msg"></div>
+  <div class="foot">Protected by Supabase Auth · Data encrypted</div>
 </div>
 
-<script src="config.js"></script>
 <script>
-  function switchTab(which) {
-    document.getElementById('tabLogin').classList.toggle('active', which === 'login');
-    document.getElementById('tabSignup').classList.toggle('active', which === 'signup');
-    document.getElementById('panelLogin').classList.toggle('active', which === 'login');
-    document.getElementById('panelSignup').classList.toggle('active', which === 'signup');
-    document.getElementById('formTitle').textContent = which === 'login' ? 'Welcome back' : 'Create your account';
-    document.getElementById('formSubtitle').textContent = which === 'login' ? 'Log in to your dashboard' : 'Start managing your social presence';
-    hideMsg();
+// ── CONFIG ──────────────────────────────────────────────
+const SB_URL  = "https://eommhgzhpissadhliuok.supabase.co";
+const SB_KEY  = "sb_publishable_rgGy0fPLsoS9htxVJYSFWg_i_x37pM7";
+// ────────────────────────────────────────────────────────
+
+const sb = window.supabase.createClient(SB_URL, SB_KEY);
+
+function show(tab) {
+  document.getElementById('pLogin').classList.toggle('active', tab==='login');
+  document.getElementById('pSignup').classList.toggle('active', tab==='signup');
+  document.querySelectorAll('.tab').forEach((t,i)=>t.classList.toggle('active',(tab==='login'&&i===0)||(tab==='signup'&&i===1)));
+  document.getElementById('title').textContent = tab==='login' ? 'Welcome back' : 'Create your account';
+  document.getElementById('sub').textContent   = tab==='login' ? 'Log in to your dashboard' : 'Start managing your social presence';
+  clrMsg();
+}
+
+function setMsg(txt,type){const m=document.getElementById('msg');m.textContent=txt;m.className='msg '+(type==='err'?'err':'ok');}
+function clrMsg(){const m=document.getElementById('msg');m.className='msg';}
+
+async function doLogin(){
+  const email=document.getElementById('lEmail').value.trim();
+  const pass =document.getElementById('lPass').value;
+  if(!email||!pass){setMsg('Please fill in both fields.','err');return;}
+  const btn=document.getElementById('lBtn');
+  btn.disabled=true;btn.textContent='Logging in…';
+  try{
+    const{data,error}=await sb.auth.signInWithPassword({email,password:pass});
+    if(error)throw error;
+    setMsg('✅ Logged in! Redirecting…','ok');
+    setTimeout(()=>location.href='app.html',900);
+  }catch(e){
+    setMsg('❌ '+e.message,'err');
+  }finally{
+    btn.disabled=false;btn.textContent='Log In';
   }
+}
 
-  function showMsg(text, type) {
-    const box = document.getElementById('msgBox');
-    box.textContent = text;
-    box.className = 'msg ' + type;
-  }
-  function hideMsg() {
-    const box = document.getElementById('msgBox');
-    box.className = 'msg';
-  }
-
-  async function doLogin() {
-    const email = document.getElementById('loginEmail').value.trim();
-    const password = document.getElementById('loginPassword').value;
-    if (!email || !password) { showMsg('Please fill in both fields.', 'error'); return; }
-
-    const btn = document.getElementById('loginBtn');
-    btn.disabled = true; btn.textContent = 'Logging in...';
-
-    const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
-
-    btn.disabled = false; btn.textContent = 'Log In';
-
-    if (error) {
-      showMsg(error.message, 'error');
-    } else {
-      showMsg('Logged in! Redirecting...', 'success');
-      setTimeout(() => window.location.href = 'app.html', 800);
+async function doSignup(){
+  const name =document.getElementById('sName').value.trim();
+  const email=document.getElementById('sEmail').value.trim();
+  const pass =document.getElementById('sPass').value;
+  if(!name||!email||!pass){setMsg('Please fill in all fields.','err');return;}
+  if(pass.length<6){setMsg('Password must be at least 6 characters.','err');return;}
+  const btn=document.getElementById('sBtn');
+  btn.disabled=true;btn.textContent='Creating account…';
+  try{
+    const{data,error}=await sb.auth.signUp({email,password:pass,options:{data:{full_name:name}}});
+    if(error)throw error;
+    if(data.session){
+      setMsg('✅ Account created! Redirecting…','ok');
+      setTimeout(()=>location.href='app.html',900);
+    }else{
+      setMsg('✅ Account created! Click Log In to continue.','ok');
+      show('login');
     }
+  }catch(e){
+    setMsg('❌ '+e.message,'err');
+  }finally{
+    btn.disabled=false;btn.textContent='Create Account';
   }
+}
 
-  async function doSignup() {
-    const name = document.getElementById('signupName').value.trim();
-    const email = document.getElementById('signupEmail').value.trim();
-    const password = document.getElementById('signupPassword').value;
-    if (!name || !email || !password) { showMsg('Please fill in all fields.', 'error'); return; }
-    if (password.length < 6) { showMsg('Password must be at least 6 characters.', 'error'); return; }
-
-    const btn = document.getElementById('signupBtn');
-    btn.disabled = true; btn.textContent = 'Creating account...';
-
-    const { data, error } = await supabaseClient.auth.signUp({
-      email, password,
-      options: { data: { full_name: name } }
-    });
-
-    btn.disabled = false; btn.textContent = 'Create Account';
-
-    if (error) {
-      showMsg(error.message, 'error');
-    } else if (data.session) {
-      showMsg('Account created! Redirecting...', 'success');
-      setTimeout(() => window.location.href = 'app.html', 800);
-    } else {
-      showMsg('Check your email to confirm your account, then log in.', 'success');
-    }
-  }
-
-  // If already logged in, skip straight to app
-  (async function checkSession() {
-    const { data: { session } } = await supabaseClient.auth.getSession();
-    if (session) window.location.href = 'app.html';
-  })();
+// auto-redirect if already logged in
+(async()=>{
+  try{
+    const{data:{session}}=await sb.auth.getSession();
+    if(session)location.href='app.html';
+  }catch(e){console.log('Session check:',e.message);}
+})();
 </script>
 </body>
 </html>
