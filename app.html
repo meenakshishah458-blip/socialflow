@@ -459,20 +459,14 @@
                 <stop offset="100%" stop-color="#a855f7" stop-opacity="0"/>
               </linearGradient>
             </defs>
-            <!-- Grid lines -->
             <line x1="0" y1="40" x2="600" y2="40" stroke="#252540" stroke-width="1"/>
             <line x1="0" y1="80" x2="600" y2="80" stroke="#252540" stroke-width="1"/>
             <line x1="0" y1="120" x2="600" y2="120" stroke="#252540" stroke-width="1"/>
             <line x1="0" y1="160" x2="600" y2="160" stroke="#252540" stroke-width="1"/>
-            <!-- Area 1 -->
             <path d="M0,140 C50,130 100,100 150,110 C200,120 250,80 300,70 C350,60 400,90 450,75 C500,60 550,50 600,40 L600,200 L0,200Z" fill="url(#g1)"/>
-            <!-- Area 2 -->
             <path d="M0,160 C50,155 100,140 150,145 C200,150 250,130 300,125 C350,120 400,135 450,120 C500,105 550,95 600,85 L600,200 L0,200Z" fill="url(#g2)"/>
-            <!-- Line 1 -->
             <path d="M0,140 C50,130 100,100 150,110 C200,120 250,80 300,70 C350,60 400,90 450,75 C500,60 550,50 600,40" fill="none" stroke="#7c3aed" stroke-width="2.5"/>
-            <!-- Line 2 -->
             <path d="M0,160 C50,155 100,140 150,145 C200,150 250,130 300,125 C350,120 400,135 450,120 C500,105 550,95 600,85" fill="none" stroke="#a855f7" stroke-width="2"/>
-            <!-- X labels -->
             <text x="0" y="195" fill="#64748b" font-size="11">Mon</text>
             <text x="80" y="195" fill="#64748b" font-size="11">Tue</text>
             <text x="165" y="195" fill="#64748b" font-size="11">Wed</text>
@@ -1186,26 +1180,22 @@
     }
     currentProfile = profile;
 
-    // Update topbar
     const name = profile.full_name || currentUser.email.split('@')[0];
     document.getElementById('topbarName').textContent = name;
     document.getElementById('topbarPlan').textContent = (profile.plan || 'free').charAt(0).toUpperCase() + (profile.plan || 'free').slice(1) + ' Plan';
     document.getElementById('topbarAvatar').textContent = name.charAt(0).toUpperCase();
 
-    // Populate Settings → Profile form
     document.getElementById('profFullName').value = profile.full_name || '';
     document.getElementById('profEmail').value = currentUser.email;
     document.getElementById('profCompany').value = profile.company || '';
     document.getElementById('profBio').value = profile.bio || '';
 
-    // Update subscription page
     const planLabelEl = document.getElementById('currentPlanLabel');
     if (planLabelEl) planLabelEl.textContent = (profile.plan || 'free') + ' Plan';
     document.querySelectorAll('.price-card').forEach(card => {
       card.classList.toggle('current', card.dataset.plan === (profile.plan || 'free'));
     });
 
-    // Show/build admin panel if user is admin
     if (profile.role === 'admin') {
       loadAdminPanel();
     } else {
@@ -1235,7 +1225,6 @@
     window.location.href = 'login.html';
   }
 
-  // ---- CURRENCY DETECTION: India = INR, everywhere else = USD ----
   let userCurrency = 'USD';
   const PRICES = {
     pro:        { inr: '₹2,400', usd: '$29' },
@@ -1248,7 +1237,7 @@
       const geo = await res.json();
       userCurrency = (geo.country_code === 'IN') ? 'INR' : 'USD';
     } catch (e) {
-      userCurrency = 'USD'; // fallback if geo lookup fails
+      userCurrency = 'USD';
     }
     document.getElementById('currencyLabel').textContent = userCurrency;
     document.getElementById('pricePro').innerHTML = (userCurrency === 'INR' ? PRICES.pro.inr : PRICES.pro.usd) + '<span>/mo</span>';
@@ -1258,7 +1247,6 @@
   async function selectPlan(plan) {
     if (!currentUser) return;
 
-    // Free plan = no payment needed, just update directly
     if (plan === 'free') {
       const { error } = await supabaseClient.from('profiles').update({ plan: 'free' }).eq('id', currentUser.id);
       if (error) { showToast('Error: ' + error.message); return; }
@@ -1267,13 +1255,11 @@
       return;
     }
 
-    // Paid plan = open Razorpay checkout
     const btn = document.getElementById(plan === 'pro' ? 'btnPro' : 'btnEnterprise');
     const originalText = btn.textContent;
     btn.disabled = true; btn.textContent = 'Loading...';
 
     try {
-      // Step 1: ask our Edge Function to create a Razorpay order
       const orderRes = await fetch(`${SUPABASE_URL}/functions/v1/razorpay-order`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -1285,7 +1271,6 @@
 
       btn.disabled = false; btn.textContent = originalText;
 
-      // Step 2: open Razorpay checkout popup
       const rzp = new Razorpay({
         key: order.keyId,
         amount: order.amount,
@@ -1296,7 +1281,6 @@
         prefill: { email: currentUser.email, name: currentProfile?.full_name || '' },
         theme: { color: '#7c3aed' },
         handler: async function (response) {
-          // Step 3: verify payment on the server, which then updates the plan
           const verifyRes = await fetch(`${SUPABASE_URL}/functions/v1/razorpay-verify`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -1380,7 +1364,6 @@
   let aiHistory = JSON.parse(localStorage.getItem('sfAiHistory') || '[]');
   let lastBrief = '';
 
-  // Multi-select platform chips
   document.addEventListener('DOMContentLoaded', function() {
     document.querySelectorAll('#platformChips .chip').forEach(chip => {
       chip.addEventListener('click', () => chip.classList.toggle('selected'));
@@ -1416,7 +1399,6 @@
 
     lastBrief = brief;
 
-    // Show output card with loading
     const outputCard = document.getElementById('aiOutputCard');
     outputCard.style.display = 'block';
     document.getElementById('aiLoading').style.display = 'block';
@@ -1436,7 +1418,6 @@
       li++;
     }, 1200);
 
-    // Build prompt
     const prompt = `You are a professional social media content creator for Indian brands and creators.
 
 Create ${contentType} for: ${platforms}
@@ -1462,9 +1443,23 @@ Format clearly with platform names as headers if multiple platforms.
 Make it creative, authentic, and ready to post as-is.`;
 
     try {
+      // ---- AUTH: get current session token so the function knows the user is logged in ----
+      const { data: { session } } = await supabaseClient.auth.getSession();
+
+      if (!session) {
+        clearInterval(loadingInterval);
+        document.getElementById('aiLoading').style.display = 'none';
+        document.getElementById('aiResult').style.display = 'block';
+        document.getElementById('aiResultContent').textContent = '❌ Error: You are not logged in. Please log in again.';
+        return;
+      }
+
       const response = await fetch(`${SUPABASE_URL}/functions/v1/generate-content`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`
+        },
         body: JSON.stringify({ prompt })
       });
 
@@ -1478,7 +1473,6 @@ Make it creative, authentic, and ready to post as-is.`;
       document.getElementById('aiResult').style.display = 'block';
       document.getElementById('aiResultContent').textContent = text;
 
-      // Save to history
       const entry = {
         id: Date.now(),
         platforms, contentType, tone, language,
@@ -1570,27 +1564,23 @@ Make it creative, authentic, and ready to post as-is.`;
     overlay.classList.toggle('show');
   }
 
-  // Navigation
   function navigate(page, btn) {
     document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
     document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
     const el = document.getElementById('page-' + page);
     if (el) el.classList.add('active');
     if (btn) btn.classList.add('active');
-    // Close sidebar on mobile after navigation
     if (window.innerWidth <= 900) {
       document.querySelector('.sidebar').classList.remove('open');
       document.getElementById('sidebarOverlay').classList.remove('show');
     }
   }
 
-  // Time tabs
   function setTab(btn) {
     document.querySelectorAll('.time-tab').forEach(t => t.classList.remove('active'));
     btn.classList.add('active');
   }
 
-  // Settings tabs
   function setSettingsTab(btn, id) {
     document.querySelectorAll('.settings-nav-item').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
@@ -1598,12 +1588,10 @@ Make it creative, authentic, and ready to post as-is.`;
     document.getElementById(id).style.display = 'block';
   }
 
-  // Modal
   function openModal() { document.getElementById('modal').classList.add('open'); }
   function closeModal() { document.getElementById('modal').classList.remove('open'); }
   function publishPost() { closeModal(); showToast('Post published successfully! 🎉'); }
 
-  // Toast
   function showToast(msg) {
     const t = document.getElementById('toast');
     t.textContent = msg;
@@ -1611,14 +1599,11 @@ Make it creative, authentic, and ready to post as-is.`;
     setTimeout(() => t.classList.remove('show'), 2800);
   }
 
-  // Calendar
   (function buildCalendar() {
     const container = document.getElementById('cal-days');
     const today = 29;
     const daysInMonth = 30;
-    const firstDay = 0; // June 2026 starts on Monday=1, but let's say offset = 1
     const hasPosts = [3,7,10,12,15,18,21,24,27,29];
-    // Add blank days for offset (June 1 2026 = Monday)
     for (let i = 0; i < 1; i++) {
       const d = document.createElement('div');
       d.className = 'cal-day muted';
@@ -1634,7 +1619,6 @@ Make it creative, authentic, and ready to post as-is.`;
     }
   })();
 
-  // Close modal on overlay click
   document.getElementById('modal').addEventListener('click', function(e) {
     if (e.target === this) closeModal();
   });
