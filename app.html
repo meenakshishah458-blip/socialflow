@@ -301,6 +301,7 @@
   }
   .progress-bar-bg { height:6px;background:var(--surface2);border-radius:3px;overflow:hidden;margin-top:10px; }
   .progress-bar-fill { height:100%;background:linear-gradient(90deg,var(--accent),var(--accent2));border-radius:3px;transition:width 0.4s; width:0%; }
+  .image-preview-thumb { max-width:120px;max-height:120px;border-radius:8px;border:1px solid var(--border);object-fit:cover; }
   @media (max-width:900px) {
     .sidebar { transform:translateX(-240px); }
     .sidebar.open { transform:translateX(0); }
@@ -869,11 +870,11 @@
       </div>
     </div>
 
-    <!-- VIDEO STUDIO (NEW) -->
+    <!-- VIDEO STUDIO -->
     <div class="page" id="page-videostudio">
       <div class="page-header">
         <h1>🎬 Video Studio</h1>
-        <p>Generate short AI videos — script, stock footage, voiceover, and rendering, all automatic.</p>
+        <p>Generate short AI videos — script, stock footage or your own image, voiceover, and rendering, all automatic.</p>
       </div>
 
       <div class="card" style="padding:28px;margin-bottom:20px">
@@ -881,6 +882,13 @@
           <label>Your Idea / Brief</label>
           <textarea id="videoBrief" style="width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:14px;font-size:14px;font-family:inherit;resize:vertical;min-height:100px;outline:none" placeholder="Example: A new organic skincare cream with turmeric and aloe vera, launching this week..."></textarea>
         </div>
+
+        <div class="form-group" style="margin-bottom:16px">
+          <label>Product Image (optional — your uploaded photo will appear throughout the video instead of stock footage)</label>
+          <input type="file" id="videoImageUpload" accept="image/*" style="width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:10px 12px;font-size:14px"/>
+          <div id="videoImagePreview" style="margin-top:10px"></div>
+        </div>
+
         <div class="form-grid" style="margin-bottom:16px">
           <div class="form-group">
             <label>Video Length</label>
@@ -892,7 +900,7 @@
               <option value="180">3 minutes</option>
             </select>
           </div>
-        <div class="form-group">
+          <div class="form-group">
             <label>Format</label>
             <select id="videoFormat">
               <option value="9:16">📱 Vertical (Reels / Shorts / Stories)</option>
@@ -901,6 +909,7 @@
             </select>
           </div>
         </div>
+
         <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
           <label class="toggle-switch">
             <input type="checkbox" id="videoCaptionsToggle" checked>
@@ -908,9 +917,10 @@
           </label>
           <span style="font-size:14px;color:var(--text)">Show captions on video</span>
         </div>
+
         <button class="publish-btn" id="generateVideoBtn" onclick="generateVideo()" style="width:100%;padding:14px;font-size:15px">
           🎬 Generate Video
-        </button> 
+        </button>
       </div>
 
       <div class="card" id="videoOutputCard" style="padding:28px;margin-bottom:20px;display:none">
@@ -1375,6 +1385,21 @@
     });
     renderHistory();
     renderVideoHistory();
+
+    // Preview selected product image
+    const imgInput = document.getElementById('videoImageUpload');
+    if (imgInput) {
+      imgInput.addEventListener('change', function() {
+        const preview = document.getElementById('videoImagePreview');
+        preview.innerHTML = '';
+        if (this.files && this.files[0]) {
+          const img = document.createElement('img');
+          img.className = 'image-preview-thumb';
+          img.src = URL.createObjectURL(this.files[0]);
+          preview.appendChild(img);
+        }
+      });
+    }
   });
 
   function getSelectedPlatforms() {
@@ -1625,15 +1650,28 @@ Make it creative, authentic, and ready to post as-is.`;
 
 <script>
   // ============================================================
-  // VIDEO STUDIO — Real AI Video Generation
+  // VIDEO STUDIO — Real AI Video Generation (with optional image upload)
   // ============================================================
 
   let videoHistory = JSON.parse(localStorage.getItem('sfVideoHistory') || '[]');
   let videoPollInterval = null;
 
+  async function uploadProductImage(file) {
+    const ext = file.name.split('.').pop();
+    const fileName = 'product-images/' + Date.now() + '.' + ext;
+    const { data, error } = await supabaseClient.storage.from('video-assets').upload(fileName, file, {
+      cacheControl: '3600',
+      upsert: false
+    });
+    if (error) throw new Error('Image upload failed: ' + error.message);
+    const { data: publicData } = supabaseClient.storage.from('video-assets').getPublicUrl(fileName);
+    return publicData.publicUrl;
+  }
+
   async function generateVideo() {
     const brief = document.getElementById('videoBrief').value.trim();
     const duration = parseInt(document.getElementById('videoDuration').value, 10);
+    const imageFile = document.getElementById('videoImageUpload').files[0];
 
     if (!brief) { showToast('Please enter your video idea first!'); return; }
 
@@ -1651,7 +1689,7 @@ Make it creative, authentic, and ready to post as-is.`;
 
     const loadingMsgs = [
       'Writing your script... ✍️',
-      'Finding stock footage... 🎥',
+      imageFile ? 'Preparing your image... 🖼️' : 'Finding stock footage... 🎥',
       'Generating AI voiceover... 🎙️',
       'Rendering your video... 🎬',
       'Almost there... ⚡'
@@ -1666,13 +1704,26 @@ Make it creative, authentic, and ready to post as-is.`;
       const { data: { session } } = await supabaseClient.auth.getSession();
       if (!session) throw new Error('You are not logged in. Please log in again.');
 
+      let productImageUrl = null;
+      if (imageFile) {
+        document.getElementById('videoLoadingMsg').textContent = 'Uploading your image... 🖼️';
+        productImageUrl = await uploadProductImage(imageFile);
+      }
+
+      document.getElementById('videoProgressFill').style.width = '30%';
+
       const genRes = await fetch(`${SUPABASE_URL}/functions/v1/generate-video`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${session.access_token}`
         },
-       body: JSON.stringify({ brief, durationSeconds: duration, showCaptions: document.getElementById('videoCaptionsToggle').checked }) 
+        body: JSON.stringify({
+          brief,
+          durationSeconds: duration,
+          showCaptions: document.getElementById('videoCaptionsToggle').checked,
+          productImageUrl
+        })
       });
 
       const genData = await genRes.json();
@@ -1694,7 +1745,7 @@ Make it creative, authentic, and ready to post as-is.`;
 
   function pollVideoStatus(renderId, brief, msgInterval, btn) {
     let attempts = 0;
-    const maxAttempts = 30; // ~2.5 minutes at 5s intervals
+    const maxAttempts = 30;
 
     videoPollInterval = setInterval(async () => {
       attempts++;
