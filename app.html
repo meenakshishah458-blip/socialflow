@@ -892,7 +892,7 @@
               <option value="180">3 minutes</option>
             </select>
           </div>
-          <div class="form-group">
+        <div class="form-group">
             <label>Format</label>
             <select id="videoFormat">
               <option value="9:16">📱 Vertical (Reels / Shorts / Stories)</option>
@@ -901,9 +901,16 @@
             </select>
           </div>
         </div>
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
+          <label class="toggle-switch">
+            <input type="checkbox" id="videoCaptionsToggle" checked>
+            <span class="toggle-slider"></span>
+          </label>
+          <span style="font-size:14px;color:var(--text)">Show captions on video</span>
+        </div>
         <button class="publish-btn" id="generateVideoBtn" onclick="generateVideo()" style="width:100%;padding:14px;font-size:15px">
           🎬 Generate Video
-        </button>
+        </button> 
       </div>
 
       <div class="card" id="videoOutputCard" style="padding:28px;margin-bottom:20px;display:none">
