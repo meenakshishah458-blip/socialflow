@@ -1665,14 +1665,14 @@ Make it creative, authentic, and ready to post as-is.`;
     try {
       const { data: { session } } = await supabaseClient.auth.getSession();
       if (!session) throw new Error('You are not logged in. Please log in again.');
-body: JSON.stringify({ brief, durationSeconds: duration, showCaptions: document.getElementById('videoCaptionsToggle').checked })
+
       const genRes = await fetch(`${SUPABASE_URL}/functions/v1/generate-video`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${session.access_token}`
         },
-        body: JSON.stringify({ brief, durationSeconds: duration })
+       body: JSON.stringify({ brief, durationSeconds: duration, showCaptions: document.getElementById('videoCaptionsToggle').checked }) 
       });
 
       const genData = await genRes.json();
