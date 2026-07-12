@@ -877,6 +877,15 @@
         <p>Generate short AI videos — script, stock footage or your own image, voiceover, and rendering, all automatic.</p>
       </div>
 
+      <div class="card" id="voiceCreditsCard" style="padding:20px;margin-bottom:20px;display:none">
+        <div class="card-header">
+          <span class="card-title">🎙️ Voice Credits Usage</span>
+          <span id="voiceCreditsTier" style="font-size:12px;color:var(--muted);text-transform:capitalize"></span>
+        </div>
+        <div style="font-size:13px;color:var(--muted);margin-bottom:8px" id="voiceCreditsText">Loading...</div>
+        <div class="progress-bar-bg"><div class="progress-bar-fill" id="voiceCreditsFill"></div></div>
+      </div>
+
       <div class="card" style="padding:28px;margin-bottom:20px">
         <div class="form-group" style="margin-bottom:16px">
           <label>Your Idea / Brief</label>
@@ -1386,7 +1395,6 @@
     renderHistory();
     renderVideoHistory();
 
-    // Preview selected product image
     const imgInput = document.getElementById('videoImageUpload');
     if (imgInput) {
       imgInput.addEventListener('change', function() {
@@ -1598,6 +1606,9 @@ Make it creative, authentic, and ready to post as-is.`;
       document.querySelector('.sidebar').classList.remove('open');
       document.getElementById('sidebarOverlay').classList.remove('show');
     }
+    if (page === 'videostudio') {
+      loadElevenLabsUsage();
+    }
   }
 
   function setTab(btn) {
@@ -1655,6 +1666,31 @@ Make it creative, authentic, and ready to post as-is.`;
 
   let videoHistory = JSON.parse(localStorage.getItem('sfVideoHistory') || '[]');
   let videoPollInterval = null;
+
+  async function loadElevenLabsUsage() {
+    try {
+      const { data: { session } } = await supabaseClient.auth.getSession();
+      if (!session) return;
+
+      const res = await fetch(`${SUPABASE_URL}/functions/v1/check-elevenlabs-usage`, {
+        method: 'GET',
+        headers: { 'Authorization': `Bearer ${session.access_token}` }
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Could not load usage');
+
+      const card = document.getElementById('voiceCreditsCard');
+      card.style.display = 'block';
+      document.getElementById('voiceCreditsTier').textContent = data.tier + ' plan';
+      document.getElementById('voiceCreditsText').textContent =
+        data.characterCount.toLocaleString() + ' / ' + data.characterLimit.toLocaleString() + ' characters used (' + data.percentUsed + '%)';
+      const fill = document.getElementById('voiceCreditsFill');
+      fill.style.width = Math.min(data.percentUsed, 100) + '%';
+      fill.style.background = data.percentUsed >= 90 ? 'var(--red)' : 'linear-gradient(90deg,var(--accent),var(--accent2))';
+    } catch (err) {
+      console.error('ElevenLabs usage load error:', err);
+    }
+  }
 
   async function uploadProductImage(file) {
     const ext = file.name.split('.').pop();
@@ -1785,6 +1821,7 @@ Make it creative, authentic, and ready to post as-is.`;
           if (videoHistory.length > 20) videoHistory = videoHistory.slice(0, 20);
           localStorage.setItem('sfVideoHistory', JSON.stringify(videoHistory));
           renderVideoHistory();
+          loadElevenLabsUsage();
 
         } else if (statusData.status === 'failed') {
           clearInterval(videoPollInterval);
