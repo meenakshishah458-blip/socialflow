@@ -301,7 +301,7 @@
   }
   .progress-bar-bg { height:6px;background:var(--surface2);border-radius:3px;overflow:hidden;margin-top:10px; }
   .progress-bar-fill { height:100%;background:linear-gradient(90deg,var(--accent),var(--accent2));border-radius:3px;transition:width 0.4s; width:0%; }
-  .image-preview-thumb { max-width:120px;max-height:120px;border-radius:8px;border:1px solid var(--border);object-fit:cover; }
+  .image-preview-thumb { max-width:100px;max-height:100px;border-radius:8px;border:1px solid var(--border);object-fit:cover; }
   @media (max-width:900px) {
     .sidebar { transform:translateX(-240px); }
     .sidebar.open { transform:translateX(0); }
@@ -874,7 +874,7 @@
     <div class="page" id="page-videostudio">
       <div class="page-header">
         <h1>🎬 Video Studio</h1>
-        <p>Generate short AI videos — script, stock footage or your own image, voiceover, and rendering, all automatic.</p>
+        <p>Generate short AI videos — script, stock footage or your own images, voiceover, and rendering, all automatic.</p>
       </div>
 
       <div class="card" id="voiceCreditsCard" style="padding:20px;margin-bottom:20px;display:none">
@@ -893,8 +893,8 @@
         </div>
 
         <div class="form-group" style="margin-bottom:16px">
-          <label>Product Image (optional — your uploaded photo will appear throughout the video instead of stock footage)</label>
-          <input type="file" id="videoImageUpload" accept="image/*" style="width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:10px 12px;font-size:14px"/>
+          <label>Product Images (optional — select one or more; your photos will appear throughout the video instead of stock footage, cycling through each scene)</label>
+          <input type="file" id="videoImageUpload" accept="image/*" multiple style="width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:10px 12px;font-size:14px"/>
           <div id="videoImagePreview" style="margin-top:10px"></div>
         </div>
 
@@ -1400,11 +1400,16 @@
       imgInput.addEventListener('change', function() {
         const preview = document.getElementById('videoImagePreview');
         preview.innerHTML = '';
-        if (this.files && this.files[0]) {
-          const img = document.createElement('img');
-          img.className = 'image-preview-thumb';
-          img.src = URL.createObjectURL(this.files[0]);
-          preview.appendChild(img);
+        preview.style.display = 'flex';
+        preview.style.gap = '10px';
+        preview.style.flexWrap = 'wrap';
+        if (this.files && this.files.length) {
+          Array.from(this.files).forEach(function(file) {
+            const img = document.createElement('img');
+            img.className = 'image-preview-thumb';
+            img.src = URL.createObjectURL(file);
+            preview.appendChild(img);
+          });
         }
       });
     }
@@ -1661,7 +1666,7 @@ Make it creative, authentic, and ready to post as-is.`;
 
 <script>
   // ============================================================
-  // VIDEO STUDIO — Real AI Video Generation (with optional image upload)
+  // VIDEO STUDIO — Real AI Video Generation (with multiple image upload)
   // ============================================================
 
   let videoHistory = JSON.parse(localStorage.getItem('sfVideoHistory') || '[]');
@@ -1692,22 +1697,27 @@ Make it creative, authentic, and ready to post as-is.`;
     }
   }
 
-  async function uploadProductImage(file) {
-    const ext = file.name.split('.').pop();
-    const fileName = 'product-images/' + Date.now() + '.' + ext;
-    const { data, error } = await supabaseClient.storage.from('video-assets').upload(fileName, file, {
-      cacheControl: '3600',
-      upsert: false
-    });
-    if (error) throw new Error('Image upload failed: ' + error.message);
-    const { data: publicData } = supabaseClient.storage.from('video-assets').getPublicUrl(fileName);
-    return publicData.publicUrl;
+  async function uploadProductImages(files) {
+    const urls = [];
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      const ext = file.name.split('.').pop();
+      const fileName = 'product-images/' + Date.now() + '-' + i + '.' + ext;
+      const { data, error } = await supabaseClient.storage.from('video-assets').upload(fileName, file, {
+        cacheControl: '3600',
+        upsert: false
+      });
+      if (error) throw new Error('Image upload failed: ' + error.message);
+      const { data: publicData } = supabaseClient.storage.from('video-assets').getPublicUrl(fileName);
+      urls.push(publicData.publicUrl);
+    }
+    return urls;
   }
 
   async function generateVideo() {
     const brief = document.getElementById('videoBrief').value.trim();
     const duration = parseInt(document.getElementById('videoDuration').value, 10);
-    const imageFile = document.getElementById('videoImageUpload').files[0];
+    const imageFiles = Array.from(document.getElementById('videoImageUpload').files);
 
     if (!brief) { showToast('Please enter your video idea first!'); return; }
 
@@ -1725,7 +1735,7 @@ Make it creative, authentic, and ready to post as-is.`;
 
     const loadingMsgs = [
       'Writing your script... ✍️',
-      imageFile ? 'Preparing your image... 🖼️' : 'Finding stock footage... 🎥',
+      imageFiles.length ? 'Preparing your images... 🖼️' : 'Finding stock footage... 🎥',
       'Generating AI voiceover... 🎙️',
       'Rendering your video... 🎬',
       'Almost there... ⚡'
@@ -1740,10 +1750,10 @@ Make it creative, authentic, and ready to post as-is.`;
       const { data: { session } } = await supabaseClient.auth.getSession();
       if (!session) throw new Error('You are not logged in. Please log in again.');
 
-      let productImageUrl = null;
-      if (imageFile) {
-        document.getElementById('videoLoadingMsg').textContent = 'Uploading your image... 🖼️';
-        productImageUrl = await uploadProductImage(imageFile);
+      let productImageUrls = [];
+      if (imageFiles.length) {
+        document.getElementById('videoLoadingMsg').textContent = 'Uploading your images... 🖼️';
+        productImageUrls = await uploadProductImages(imageFiles);
       }
 
       document.getElementById('videoProgressFill').style.width = '30%';
@@ -1758,7 +1768,7 @@ Make it creative, authentic, and ready to post as-is.`;
           brief,
           durationSeconds: duration,
           showCaptions: document.getElementById('videoCaptionsToggle').checked,
-          productImageUrl
+          productImageUrls
         })
       });
 
