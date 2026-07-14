@@ -1737,7 +1737,7 @@ Make it creative, authentic, and ready to post as-is.`;
   async function generateVideo() {
     const brief = document.getElementById('videoBrief').value.trim();
     const duration = parseInt(document.getElementById('videoDuration').value, 10);
-    const imageFiles = Array.from(document.getElementById('videoImageUpload').files);
+    const imageFiles = selectedImageFiles;
 
     if (!brief) { showToast('Please enter your video idea first!'); return; }
 
