@@ -302,6 +302,15 @@
   .progress-bar-bg { height:6px;background:var(--surface2);border-radius:3px;overflow:hidden;margin-top:10px; }
   .progress-bar-fill { height:100%;background:linear-gradient(90deg,var(--accent),var(--accent2));border-radius:3px;transition:width 0.4s; width:0%; }
   .image-preview-thumb { max-width:100px;max-height:100px;border-radius:8px;border:1px solid var(--border);object-fit:cover; }
+  .trend-grid { display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:16px; }
+  .trend-card { background:var(--surface2);border:1px solid var(--border);border-radius:10px;overflow:hidden;display:flex;flex-direction:column; }
+  .trend-thumb { width:100%;aspect-ratio:16/9;object-fit:cover;background:var(--border); }
+  .trend-body { padding:12px;display:flex;flex-direction:column;gap:6px;flex:1; }
+  .trend-title { font-size:13px;font-weight:600;line-height:1.35;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden; }
+  .trend-channel { font-size:11px;color:var(--muted); }
+  .trend-stats { font-size:11px;color:var(--accent2);display:flex;gap:10px; }
+  .trend-actions { display:flex;gap:6px;margin-top:auto; }
+  .trend-actions a, .trend-actions button { flex:1;text-align:center;font-size:12px;padding:6px;border-radius:6px;text-decoration:none; }
   @media (max-width:900px) {
     .sidebar { transform:translateX(-240px); }
     .sidebar.open { transform:translateX(0); }
@@ -327,6 +336,7 @@
   </div>
   <div class="nav">
     <button class="nav-item active" onclick="navigate('dashboard',this)"><span class="nav-icon">🏠</span>Dashboard</button>
+    <button class="nav-item" onclick="navigate('trends',this)"><span class="nav-icon">🔥</span>Trend Catcher</button>
     <button class="nav-item" onclick="navigate('automation',this)"><span class="nav-icon">🔄</span>Automation</button>
     <button class="nav-item" onclick="navigate('content',this)"><span class="nav-icon">✏️</span>Content Creator</button>
     <button class="nav-item" onclick="navigate('videostudio',this)"><span class="nav-icon">🎬</span>Video Studio</button>
@@ -553,6 +563,53 @@
             </div>
           </div>
         </div>
+      </div>
+    </div>
+
+    <!-- TREND CATCHER -->
+    <div class="page" id="page-trends">
+      <div class="page-header">
+        <h1>🔥 Trend Catcher</h1>
+        <p>Discover trending and viral YouTube content, then get AI insights on why it's working.</p>
+      </div>
+
+      <div class="card" style="padding:24px;margin-bottom:20px">
+        <div class="form-grid" style="margin-bottom:16px">
+          <div class="form-group">
+            <label>Search Keyword (optional)</label>
+            <input type="text" id="trendKeyword" placeholder="e.g. skincare, fitness, tech gadgets..."/>
+          </div>
+          <div class="form-group">
+            <label>Region</label>
+            <select id="trendRegion">
+              <option value="IN" selected>🇮🇳 India</option>
+              <option value="US">🇺🇸 United States</option>
+              <option value="GB">🇬🇧 United Kingdom</option>
+            </select>
+          </div>
+        </div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap">
+          <button class="publish-btn" onclick="fetchTrends()">🔍 Search / Refresh Trends</button>
+          <button class="connect-btn" onclick="document.getElementById('trendKeyword').value='';fetchTrends()">🔥 Show General Trending</button>
+        </div>
+      </div>
+
+      <div id="trendLoading" style="display:none;text-align:center;padding:40px">
+        <div style="font-size:32px;margin-bottom:12px;animation:spin 1s linear infinite;display:inline-block">🔥</div>
+        <div style="font-size:13px;color:var(--muted)">Fetching trending videos...</div>
+      </div>
+
+      <div id="trendError" style="display:none;color:var(--red);font-size:13px;padding:16px;background:rgba(239,68,68,0.1);border-radius:8px;margin-bottom:20px"></div>
+
+      <div class="trend-grid" id="trendGrid"></div>
+
+      <div class="card" id="trendAnalysisCard" style="padding:24px;margin-top:20px;display:none">
+        <div class="card-header">
+          <span class="card-title">🧠 AI Analysis</span>
+          <button class="connect-btn" onclick="document.getElementById('trendAnalysisCard').style.display='none'">✕ Close</button>
+        </div>
+        <div id="trendAnalysisLoading" style="display:none;text-align:center;padding:20px;color:var(--muted);font-size:13px">Analyzing...</div>
+        <div id="trendAnalysisContent" style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:16px;font-size:14px;line-height:1.7;white-space:pre-wrap"></div>
       </div>
     </div>
 
@@ -1608,6 +1665,9 @@ Make it creative, authentic, and ready to post as-is.`;
     if (page === 'videostudio') {
       loadElevenLabsUsage();
     }
+    if (page === 'trends' && !document.getElementById('trendGrid').innerHTML) {
+      fetchTrends();
+    }
   }
 
   function setTab(btn) {
@@ -1656,6 +1716,132 @@ Make it creative, authentic, and ready to post as-is.`;
   document.getElementById('modal').addEventListener('click', function(e) {
     if (e.target === this) closeModal();
   });
+</script>
+
+<script>
+  // ============================================================
+  // TREND CATCHER — Real YouTube trending/search data + AI analysis
+  // ============================================================
+
+  function formatCount(n) {
+    n = parseInt(n, 10) || 0;
+    if (n >= 1000000) return (n / 1000000).toFixed(1) + 'M';
+    if (n >= 1000) return (n / 1000).toFixed(1) + 'K';
+    return n.toString();
+  }
+
+  async function fetchTrends() {
+    const keyword = document.getElementById('trendKeyword').value.trim();
+    const region = document.getElementById('trendRegion').value;
+
+    document.getElementById('trendLoading').style.display = 'block';
+    document.getElementById('trendError').style.display = 'none';
+    document.getElementById('trendGrid').innerHTML = '';
+
+    try {
+      const { data: { session } } = await supabaseClient.auth.getSession();
+      if (!session) throw new Error('You are not logged in. Please log in again.');
+
+      const res = await fetch(`${SUPABASE_URL}/functions/v1/get-trending-videos`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`
+        },
+        body: JSON.stringify({ regionCode: region, categoryKeyword: keyword || null })
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Could not fetch trends');
+
+      document.getElementById('trendLoading').style.display = 'none';
+
+      if (!data.videos || !data.videos.length) {
+        document.getElementById('trendGrid').innerHTML = '<div style="grid-column:1/-1;text-align:center;color:var(--muted);padding:30px">No videos found.</div>';
+        return;
+      }
+
+      renderTrendGrid(data.videos);
+
+    } catch (err) {
+      document.getElementById('trendLoading').style.display = 'none';
+      document.getElementById('trendError').style.display = 'block';
+      document.getElementById('trendError').textContent = '❌ Error: ' + err.message;
+    }
+  }
+
+  let trendVideosCache = [];
+
+  function renderTrendGrid(videos) {
+    trendVideosCache = videos;
+    const grid = document.getElementById('trendGrid');
+    grid.innerHTML = videos.map(function(v, i) {
+      return `
+        <div class="trend-card">
+          <img class="trend-thumb" src="${v.thumbnail || ''}" alt="thumbnail"/>
+          <div class="trend-body">
+            <div class="trend-title">${v.title}</div>
+            <div class="trend-channel">${v.channelTitle}</div>
+            <div class="trend-stats">
+              <span>👁️ ${formatCount(v.viewCount)}</span>
+              <span>👍 ${formatCount(v.likeCount)}</span>
+              <span>💬 ${formatCount(v.commentCount)}</span>
+            </div>
+            <div class="trend-actions">
+              <a href="${v.url}" target="_blank" class="connect-btn">▶️ Watch</a>
+              <button class="save-btn" style="margin:0" onclick="analyzeTrend(${i})">🧠 Analyze</button>
+            </div>
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  async function analyzeTrend(index) {
+    const video = trendVideosCache[index];
+    if (!video) return;
+
+    const card = document.getElementById('trendAnalysisCard');
+    card.style.display = 'block';
+    card.scrollIntoView({ behavior: 'smooth' });
+    document.getElementById('trendAnalysisLoading').style.display = 'block';
+    document.getElementById('trendAnalysisContent').textContent = '';
+
+    const prompt = `You are a social media strategist. Analyze this YouTube video's performance and explain in simple, practical language:
+1. Why this video might be performing well (based on title, channel, and stats)
+2. What content ideas a small brand/creator could take inspiration from
+3. A suggested angle to create similar content for Instagram or short-form video
+
+Video title: "${video.title}"
+Channel: ${video.channelTitle}
+Views: ${video.viewCount}
+Likes: ${video.likeCount}
+Comments: ${video.commentCount}
+
+Keep the response concise, actionable, and in a friendly tone.`;
+
+    try {
+      const { data: { session } } = await supabaseClient.auth.getSession();
+      if (!session) throw new Error('You are not logged in.');
+
+      const res = await fetch(`${SUPABASE_URL}/functions/v1/generate-content`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`
+        },
+        body: JSON.stringify({ prompt })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Analysis failed');
+
+      document.getElementById('trendAnalysisLoading').style.display = 'none';
+      document.getElementById('trendAnalysisContent').textContent = data.text || 'No analysis available.';
+    } catch (err) {
+      document.getElementById('trendAnalysisLoading').style.display = 'none';
+      document.getElementById('trendAnalysisContent').textContent = '❌ Error: ' + err.message;
+    }
+  }
 </script>
 
 <script>
