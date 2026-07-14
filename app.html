@@ -1665,6 +1665,32 @@ Make it creative, authentic, and ready to post as-is.`;
 
   let videoHistory = JSON.parse(localStorage.getItem('sfVideoHistory') || '[]');
   let videoPollInterval = null;
+  let selectedImageFiles = [];
+
+  function renderImagePreview() {
+    const preview = document.getElementById('videoImagePreview');
+    preview.innerHTML = '';
+    preview.style.display = 'flex';
+    preview.style.gap = '10px';
+    preview.style.flexWrap = 'wrap';
+    selectedImageFiles.forEach(function(file, idx) {
+      const wrap = document.createElement('div');
+      wrap.style.position = 'relative';
+      const img = document.createElement('img');
+      img.className = 'image-preview-thumb';
+      img.src = URL.createObjectURL(file);
+      wrap.appendChild(img);
+      const removeBtn = document.createElement('button');
+      removeBtn.textContent = '×';
+      removeBtn.style.cssText = 'position:absolute;top:-6px;right:-6px;background:var(--red);color:#fff;border:none;border-radius:50%;width:20px;height:20px;cursor:pointer;font-size:14px;line-height:1;';
+      removeBtn.onclick = function() {
+        selectedImageFiles.splice(idx, 1);
+        renderImagePreview();
+      };
+      wrap.appendChild(removeBtn);
+      preview.appendChild(wrap);
+    });
+  }
 
   async function loadElevenLabsUsage() {
     try {
