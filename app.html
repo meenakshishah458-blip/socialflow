@@ -1398,19 +1398,13 @@
     const imgInput = document.getElementById('videoImageUpload');
     if (imgInput) {
       imgInput.addEventListener('change', function() {
-        const preview = document.getElementById('videoImagePreview');
-        preview.innerHTML = '';
-        preview.style.display = 'flex';
-        preview.style.gap = '10px';
-        preview.style.flexWrap = 'wrap';
         if (this.files && this.files.length) {
           Array.from(this.files).forEach(function(file) {
-            const img = document.createElement('img');
-            img.className = 'image-preview-thumb';
-            img.src = URL.createObjectURL(file);
-            preview.appendChild(img);
+            selectedImageFiles.push(file);
           });
         }
+        this.value = '';
+        renderImagePreview();
       });
     }
   });
