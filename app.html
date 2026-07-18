@@ -1753,6 +1753,18 @@ Make it creative, authentic, and ready to post as-is.`;
     overlay.classList.toggle('show');
   }
 
+  function goToYoutubeKeySettings() {
+    const settingsBtn = Array.from(document.querySelectorAll('.nav-item')).find(b => b.textContent.trim() === 'Settings');
+    navigate('settings', settingsBtn);
+    setTimeout(function () {
+      document.querySelectorAll('.settings-nav-item').forEach(function (b) { b.classList.remove('active'); });
+      document.querySelectorAll('.settings-section').forEach(function (s) { s.style.display = 'none'; });
+      const apiTabBtn = Array.from(document.querySelectorAll('.settings-nav-item')).find(function (b) { return b.textContent.includes('API'); });
+      if (apiTabBtn) { apiTabBtn.classList.add('active'); }
+      document.getElementById('s-api').style.display = 'block';
+    }, 50);
+  }
+
   function navigate(page, btn) {
     document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
     document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
@@ -1835,19 +1847,6 @@ Make it creative, authentic, and ready to post as-is.`;
     const keyword = document.getElementById('trendKeyword').value.trim();
     const region = document.getElementById('trendRegion').value;
 
-    if (!currentProfile || !currentProfile.youtube_api_key) {
-      showToast('Please add your own YouTube API key in Settings → API & Integrations first.');
-      navigate('settings');
-      setTimeout(() => {
-        document.querySelectorAll('.settings-nav-item').forEach(b => b.classList.remove('active'));
-        document.querySelectorAll('.settings-section').forEach(s => s.style.display = 'none');
-        const apiTabBtn = Array.from(document.querySelectorAll('.settings-nav-item')).find(b => b.textContent.includes('API'));
-        if (apiTabBtn) { apiTabBtn.classList.add('active'); }
-        document.getElementById('s-api').style.display = 'block';
-      }, 100);
-      return;
-    }
-
     document.getElementById('trendLoading').style.display = 'block';
     document.getElementById('trendError').style.display = 'none';
     document.getElementById('trendGrid').innerHTML = '';
@@ -1856,13 +1855,34 @@ Make it creative, authentic, and ready to post as-is.`;
       const { data: { session } } = await supabaseClient.auth.getSession();
       if (!session) throw new Error('You are not logged in. Please log in again.');
 
+      // Always fetch the key fresh from the database (avoids race conditions with
+      // currentProfile possibly not being loaded yet right after navigation).
+      const { data: freshProfile } = await supabaseClient
+        .from('profiles')
+        .select('youtube_api_key')
+        .eq('id', currentUser.id)
+        .single();
+
+      const savedKey = freshProfile?.youtube_api_key;
+      if (currentProfile) currentProfile.youtube_api_key = savedKey;
+
+      if (!savedKey) {
+        document.getElementById('trendLoading').style.display = 'none';
+        const errEl = document.getElementById('trendError');
+        errEl.style.display = 'block';
+        errEl.innerHTML = 'Please add your own YouTube Data API key to use the Viral Video Finder. ' +
+          '<button class="price-btn" style="display:inline-block;width:auto;padding:6px 14px;margin-left:10px" ' +
+          'onclick="goToYoutubeKeySettings()">Go to Settings</button>';
+        return;
+      }
+
       const res = await fetch(`${SUPABASE_URL}/functions/v1/get-trending-videos`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${session.access_token}`
         },
-        body: JSON.stringify({ regionCode: region, categoryKeyword: keyword || null, youtubeApiKey: currentProfile.youtube_api_key })
+        body: JSON.stringify({ regionCode: region, categoryKeyword: keyword || null, youtubeApiKey: savedKey })
       });
 
       const data = await res.json();
