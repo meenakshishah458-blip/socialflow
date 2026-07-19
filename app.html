@@ -1230,10 +1230,15 @@
           <div class="stat-card"><div class="stat-top"><span class="stat-icon">🔑</span></div><div class="stat-val" id="adminCount">—</div><div class="stat-label">Admins</div></div>
         </div>
         <div class="table-card">
+          <div style="padding:16px 16px 0 16px">
+            <input type="text" id="adminUserSearch" placeholder="🔍 Search by name or email..." 
+              oninput="filterAdminUsers()" 
+              style="width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:10px 14px;font-size:14px;outline:none;margin-bottom:14px"/>
+          </div>
           <table>
-            <thead><tr><th>Name</th><th>Plan</th><th>Role</th><th>Joined</th></tr></thead>
+            <thead><tr><th>Name</th><th>Email</th><th>Plan</th><th>Role</th><th>Joined</th><th>Action</th></tr></thead>
             <tbody id="adminUserTable">
-              <tr><td colspan="4" style="text-align:center;color:var(--muted)">Loading users...</td></tr>
+              <tr><td colspan="6" style="text-align:center;color:var(--muted)">Loading users...</td></tr>
             </tbody>
           </table>
         </div>
@@ -1497,6 +1502,8 @@
     });
   }
 
+  let allAdminProfiles = [];
+
   async function loadAdminPanel() {
     document.getElementById('adminGate').style.display = 'none';
     document.getElementById('adminContent').style.display = 'block';
@@ -1508,9 +1515,11 @@
 
     if (error) {
       document.getElementById('adminUserTable').innerHTML =
-        '<tr><td colspan="4" style="text-align:center;color:var(--red)">Error loading users: ' + error.message + '</td></tr>';
+        '<tr><td colspan="6" style="text-align:center;color:var(--red)">Error loading users: ' + error.message + '</td></tr>';
       return;
     }
+
+    allAdminProfiles = allProfiles;
 
     const total = allProfiles.length;
     const proCount = allProfiles.filter(p => p.plan === 'pro' || p.plan === 'enterprise').length;
@@ -1520,17 +1529,71 @@
     document.getElementById('adminProUsers').textContent = proCount;
     document.getElementById('adminCount').textContent = adminCount;
 
-    const rows = allProfiles.map(p => {
+    renderAdminUserTable(allProfiles);
+  }
+
+  function renderAdminUserTable(profiles) {
+    const rows = profiles.map(p => {
       const joined = p.created_at ? new Date(p.created_at).toLocaleDateString() : '—';
+      let actionBtn = '';
+      if (p.plan === 'trial') {
+        actionBtn = `<button class="price-btn" style="width:auto;padding:5px 10px;font-size:12px;background:var(--red)" onclick="revokeTrial('${p.id}')">End Trial</button>`;
+      } else if (p.plan === 'none' || !p.plan) {
+        actionBtn = `<button class="price-btn" style="width:auto;padding:5px 10px;font-size:12px" onclick="grantTrial('${p.id}')">Grant Trial</button>`;
+      } else {
+        actionBtn = `<span style="color:var(--muted);font-size:12px">Paid plan</span>`;
+      }
       return `<tr>
         <td>${p.full_name || '(no name set)'}</td>
-        <td style="text-transform:capitalize">${p.plan || 'free'}</td>
+        <td>${p.email || '—'}</td>
+        <td style="text-transform:capitalize">${p.plan || 'none'}</td>
         <td style="text-transform:capitalize">${p.role || 'user'}</td>
         <td>${joined}</td>
+        <td>${actionBtn}</td>
       </tr>`;
     }).join('');
 
-    document.getElementById('adminUserTable').innerHTML = rows || '<tr><td colspan="4" style="text-align:center;color:var(--muted)">No users yet.</td></tr>';
+    document.getElementById('adminUserTable').innerHTML = rows || '<tr><td colspan="6" style="text-align:center;color:var(--muted)">No users found.</td></tr>';
+  }
+
+  function filterAdminUsers() {
+    const q = document.getElementById('adminUserSearch').value.trim().toLowerCase();
+    if (!q) { renderAdminUserTable(allAdminProfiles); return; }
+    const filtered = allAdminProfiles.filter(p =>
+      (p.full_name && p.full_name.toLowerCase().includes(q)) ||
+      (p.email && p.email.toLowerCase().includes(q))
+    );
+    renderAdminUserTable(filtered);
+  }
+
+  async function grantTrial(targetUserId) {
+    if (!confirm('Grant trial access (2 free watermarked videos + full Trend Catcher/Content Creator access) to this user?')) return;
+    await callAdminGrantTrial(targetUserId, 'grant');
+  }
+
+  async function revokeTrial(targetUserId) {
+    if (!confirm('End this user\\'s trial access?')) return;
+    await callAdminGrantTrial(targetUserId, 'revoke');
+  }
+
+  async function callAdminGrantTrial(targetUserId, action) {
+    try {
+      const { data: { session } } = await supabaseClient.auth.getSession();
+      const res = await fetch(`${SUPABASE_URL}/functions/v1/admin-grant-trial`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`
+        },
+        body: JSON.stringify({ targetUserId, action })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Action failed');
+      showToast(action === 'grant' ? 'Trial granted!' : 'Trial ended.');
+      loadAdminPanel();
+    } catch (err) {
+      showToast('Error: ' + err.message);
+    }
   }
 
   initAuth();
@@ -1864,18 +1927,21 @@ Make it creative, authentic, and ready to post as-is.`;
       const { data: { session } } = await supabaseClient.auth.getSession();
       if (!session) throw new Error('You are not logged in. Please log in again.');
 
-      // Always fetch the key fresh from the database (avoids race conditions with
-      // currentProfile possibly not being loaded yet right after navigation).
+      // Always fetch fresh from the database (avoids race conditions with currentProfile
+      // possibly not being loaded yet right after navigation).
       const { data: freshProfile } = await supabaseClient
         .from('profiles')
-        .select('youtube_api_key')
+        .select('youtube_api_key, plan')
         .eq('id', currentUser.id)
         .single();
 
       const savedKey = freshProfile?.youtube_api_key;
+      const userPlan = freshProfile?.plan;
       if (currentProfile) currentProfile.youtube_api_key = savedKey;
 
-      if (!savedKey) {
+      // Trial users don't need their own key yet — the backend lets them borrow
+      // SocialFlow's shared key so they can see the value first.
+      if (!savedKey && userPlan !== 'trial') {
         document.getElementById('trendLoading').style.display = 'none';
         const errEl = document.getElementById('trendError');
         errEl.style.display = 'block';
@@ -2127,7 +2193,11 @@ Keep the response concise, actionable, and in a friendly tone.`;
       document.getElementById('videoProgressFill').style.width = '50%';
       const renderId = genData.renderId;
 
-      pollVideoStatus(renderId, brief, msgInterval, btn);
+      if (genData.isTrial) {
+        showToast(genData.message || 'Trial video rendering (watermarked).');
+      }
+
+      pollVideoStatus(renderId, brief, msgInterval, btn, genData.isTrial || false);
 
     } catch (err) {
       clearInterval(msgInterval);
@@ -2138,7 +2208,7 @@ Keep the response concise, actionable, and in a friendly tone.`;
     }
   }
 
-  function pollVideoStatus(renderId, brief, msgInterval, btn) {
+  function pollVideoStatus(renderId, brief, msgInterval, btn, isTrial) {
     let attempts = 0;
     const maxAttempts = 30;
 
@@ -2152,7 +2222,7 @@ Keep the response concise, actionable, and in a friendly tone.`;
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${session.access_token}`
           },
-          body: JSON.stringify({ renderId })
+          body: JSON.stringify({ renderId, isTrial })
         });
         const statusData = await statusRes.json();
 
