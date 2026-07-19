@@ -1572,7 +1572,7 @@
   }
 
   async function revokeTrial(targetUserId) {
-    if (!confirm('End this user\\'s trial access?')) return;
+    if (!confirm("End this user's trial access?")) return;
     await callAdminGrantTrial(targetUserId, 'revoke');
   }
 
