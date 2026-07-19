@@ -841,8 +841,8 @@
             <div style="margin-bottom:20px">
               <div style="font-size:13px;font-weight:500;margin-bottom:10px;color:var(--muted)">API KEY</div>
               <div class="api-key-row">
-                <input class="api-key-input" value="sf_live_••••••••••••••••••4f2a" readonly/>
-                <button class="copy-btn" onclick="showToast('API key copied!')">📋 Copy</button>
+                <input class="api-key-input" id="internalApiKeyInput" value="sf_live_••••••••••••••••••4f2a" readonly/>
+                <button class="copy-btn" onclick="copyInternalApiKey()">📋 Copy</button>
                 <button class="gen-btn" onclick="showToast('New key generated!')">Generate New</button>
               </div>
             </div>
@@ -1751,6 +1751,15 @@ Make it creative, authentic, and ready to post as-is.`;
     const overlay = document.getElementById('sidebarOverlay');
     sidebar.classList.toggle('open');
     overlay.classList.toggle('show');
+  }
+
+  function copyInternalApiKey() {
+    const val = document.getElementById('internalApiKeyInput').value;
+    navigator.clipboard.writeText(val).then(function () {
+      showToast('API key copied!');
+    }).catch(function () {
+      showToast('Could not copy — please copy manually.');
+    });
   }
 
   function goToYoutubeKeySettings() {
