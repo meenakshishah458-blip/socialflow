@@ -1236,7 +1236,7 @@
               style="width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:10px 14px;font-size:14px;outline:none;margin-bottom:14px"/>
           </div>
           <table>
-            <thead><tr><th>Name</th><th>Email</th><th>Plan</th><th>Role</th><th>Joined</th><th>Action</th></tr></thead>
+            <thead><tr><th>Name</th><th>Email</th><th>Plan</th><th>Role</th><th>Expiry</th><th>Action</th></tr></thead>
             <tbody id="adminUserTable">
               <tr><td colspan="6" style="text-align:center;color:var(--muted)">Loading users...</td></tr>
             </tbody>
@@ -1534,12 +1534,23 @@
 
   function renderAdminUserTable(profiles) {
     const rows = profiles.map(p => {
-      const joined = p.created_at ? new Date(p.created_at).toLocaleDateString() : '—';
-      let actionBtn = '';
       const paidPlans = ['starter', 'pro', 'enterprise'];
-      if (p.plan === 'trial') {
+      const now = new Date();
+      const expiresAt = p.plan_expires_at ? new Date(p.plan_expires_at) : null;
+      const isExpired = expiresAt && expiresAt < now;
+
+      let expiryDisplay = '—';
+      if (expiresAt) {
+        const dateStr = expiresAt.toLocaleDateString() + ' ' + expiresAt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        expiryDisplay = isExpired
+          ? `<span style="color:var(--red)">${dateStr} (expired)</span>`
+          : dateStr;
+      }
+
+      let actionBtn = '';
+      if (p.plan === 'trial' && !isExpired) {
         actionBtn = `<button class="price-btn" style="width:auto;padding:5px 10px;font-size:12px;background:var(--red)" onclick="revokeTrial('${p.id}')">End Trial</button>`;
-      } else if (paidPlans.includes(p.plan)) {
+      } else if (paidPlans.includes(p.plan) && !isExpired) {
         actionBtn = `<span style="color:var(--muted);font-size:12px">Paid plan</span>`;
       } else {
         actionBtn = `<button class="price-btn" style="width:auto;padding:5px 10px;font-size:12px" onclick="grantTrial('${p.id}')">Grant Trial</button>`;
@@ -1549,7 +1560,7 @@
         <td>${p.email || '—'}</td>
         <td style="text-transform:capitalize">${p.plan || 'none'}</td>
         <td style="text-transform:capitalize">${p.role || 'user'}</td>
-        <td>${joined}</td>
+        <td>${expiryDisplay}</td>
         <td>${actionBtn}</td>
       </tr>`;
     }).join('');
