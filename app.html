@@ -1186,7 +1186,29 @@
       <div class="card" style="margin-top:24px;padding:24px">
         <div style="font-size:13px;color:var(--muted);margin-bottom:6px">CURRENT PLAN</div>
         <div style="font-size:20px;font-weight:700;text-transform:capitalize" id="currentPlanLabel">Loading...</div>
-        <div style="font-size:12px;color:var(--muted);margin-top:6px">Plan changes take effect immediately. Payments are securely processed via Razorpay.</div>
+        <div style="font-size:13px;margin-top:10px" id="planValidityLabel"></div>
+
+        <div style="margin-top:20px" id="planUsageBlock">
+          <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:6px">
+            <span style="color:var(--muted)">AI Videos this period</span>
+            <span id="videoUsageText" style="font-weight:600">—</span>
+          </div>
+          <div style="background:var(--surface2);border-radius:6px;height:8px;overflow:hidden">
+            <div id="videoUsageBar" style="background:var(--accent);height:100%;width:0%;transition:width 0.3s"></div>
+          </div>
+        </div>
+
+        <div style="margin-top:16px;display:none" id="searchUsageBlock">
+          <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:6px">
+            <span style="color:var(--muted)">Shared-key Trend searches (trial)</span>
+            <span id="searchUsageText" style="font-weight:600">—</span>
+          </div>
+          <div style="background:var(--surface2);border-radius:6px;height:8px;overflow:hidden">
+            <div id="searchUsageBar" style="background:var(--accent2);height:100%;width:0%;transition:width 0.3s"></div>
+          </div>
+        </div>
+
+        <div style="font-size:12px;color:var(--muted);margin-top:16px">Plan changes take effect immediately. Payments are securely processed via Razorpay.</div>
       </div>
     </div>
 
@@ -1353,10 +1375,64 @@
       card.classList.toggle('current', card.dataset.plan === (profile.plan || 'free'));
     });
 
+    renderPlanUsage(profile);
+
     if (profile.role === 'admin') {
       loadAdminPanel();
     } else {
       document.getElementById('adminGateMsg').textContent = "You don't have admin access. Contact your workspace owner if you believe this is a mistake.";
+    }
+  }
+
+  const PLAN_VIDEO_LIMITS = { trial: 2, starter: 5, pro: 40, enterprise: 100 };
+  const TRIAL_SEARCH_LIMIT = 15;
+
+  function renderPlanUsage(profile) {
+    const plan = profile.plan || 'none';
+    const validityEl = document.getElementById('planValidityLabel');
+    const expiresAt = profile.plan_expires_at ? new Date(profile.plan_expires_at) : null;
+
+    if (plan === 'none' || !plan) {
+      validityEl.innerHTML = '<span style="color:var(--muted)">No active plan — choose a plan below to get started.</span>';
+    } else if (!expiresAt) {
+      validityEl.innerHTML = '<span style="color:var(--muted)">Validity not set.</span>';
+    } else {
+      const now = new Date();
+      const msLeft = expiresAt - now;
+      if (msLeft <= 0) {
+        validityEl.innerHTML = '<span style="color:var(--red)">Expired on ' + expiresAt.toLocaleDateString() + '. Please ' + (plan === 'trial' ? 'upgrade to a paid plan' : 'renew your subscription') + '.</span>';
+      } else {
+        const hoursLeft = Math.floor(msLeft / (1000 * 60 * 60));
+        const daysLeft = Math.floor(hoursLeft / 24);
+        const remainingText = plan === 'trial'
+          ? hoursLeft + ' hour(s) remaining'
+          : daysLeft + ' day(s) remaining';
+        validityEl.innerHTML = '<span style="color:var(--green)">Valid until ' + expiresAt.toLocaleDateString() + ' ' + expiresAt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) + ' (' + remainingText + ')</span>';
+      }
+    }
+
+    const videoLimit = PLAN_VIDEO_LIMITS[plan];
+    const videosUsed = profile.trial_videos_used || 0;
+    if (videoLimit) {
+      document.getElementById('videoUsageText').textContent = videosUsed + ' / ' + videoLimit + ' used';
+      const pct = Math.min(100, Math.round((videosUsed / videoLimit) * 100));
+      document.getElementById('videoUsageBar').style.width = pct + '%';
+      document.getElementById('videoUsageBar').style.background = pct >= 100 ? 'var(--red)' : 'var(--accent)';
+    } else {
+      document.getElementById('videoUsageText').textContent = 'No active plan';
+      document.getElementById('videoUsageBar').style.width = '0%';
+    }
+
+    const searchBlock = document.getElementById('searchUsageBlock');
+    if (plan === 'trial') {
+      searchBlock.style.display = 'block';
+      const searchesUsed = profile.trial_searches_used || 0;
+      document.getElementById('searchUsageText').textContent = searchesUsed + ' / ' + TRIAL_SEARCH_LIMIT + ' used';
+      const spct = Math.min(100, Math.round((searchesUsed / TRIAL_SEARCH_LIMIT) * 100));
+      document.getElementById('searchUsageBar').style.width = spct + '%';
+      document.getElementById('searchUsageBar').style.background = spct >= 100 ? 'var(--red)' : 'var(--accent2)';
+    } else {
+      searchBlock.style.display = 'none';
     }
   }
 
