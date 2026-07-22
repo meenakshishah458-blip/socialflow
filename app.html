@@ -1041,6 +1041,30 @@
           </div>
         </div>
 
+        <div class="form-group" style="margin-bottom:16px">
+          <label>Voiceover Voice</label>
+          <select id="videoVoice">
+            <optgroup label="🙋‍♂️ Male">
+              <option value="male_adam">Adam — Deep, neutral</option>
+              <option value="male_antoni">Antoni — Warm, friendly</option>
+              <option value="male_arnold">Arnold — Strong, confident</option>
+              <option value="male_josh">Josh — Young, energetic</option>
+              <option value="male_sam">Sam — Casual, conversational</option>
+            </optgroup>
+            <optgroup label="🙋‍♀️ Female">
+              <option value="female_rachel" selected>Rachel — Calm, neutral</option>
+              <option value="female_domi">Domi — Strong, confident</option>
+              <option value="female_bella">Bella — Soft, warm</option>
+              <option value="female_elli">Elli — Young, bright</option>
+              <option value="female_charlotte">Charlotte — Expressive</option>
+            </optgroup>
+            <optgroup label="🧒 Child">
+              <option value="child_boy">Boy voice</option>
+              <option value="child_girl">Girl voice</option>
+            </optgroup>
+          </select>
+        </div>
+
         <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
           <label class="toggle-switch">
             <input type="checkbox" id="videoCaptionsToggle" checked>
@@ -2288,7 +2312,9 @@ Keep the response concise, actionable, and in a friendly tone.`;
           brief,
           durationSeconds: duration,
           showCaptions: document.getElementById('videoCaptionsToggle').checked,
-          productImageUrls
+          productImageUrls,
+          voiceId: document.getElementById('videoVoice').value,
+          aspectRatio: document.getElementById('videoFormat').value
         })
       });
 
