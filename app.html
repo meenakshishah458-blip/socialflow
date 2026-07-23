@@ -1282,9 +1282,9 @@
               style="width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:10px 14px;font-size:14px;outline:none;margin-bottom:14px"/>
           </div>
           <table>
-            <thead><tr><th>Name</th><th>Email</th><th>Plan</th><th>Role</th><th>Expiry</th><th>Action</th></tr></thead>
+            <thead><tr><th>Name</th><th>Email</th><th>Plan</th><th>Role</th><th>Videos Used</th><th>Expiry</th><th>Action</th></tr></thead>
             <tbody id="adminUserTable">
-              <tr><td colspan="6" style="text-align:center;color:var(--muted)">Loading users...</td></tr>
+              <tr><td colspan="7" style="text-align:center;color:var(--muted)">Loading users...</td></tr>
             </tbody>
           </table>
         </div>
@@ -1632,7 +1632,7 @@
 
     if (error) {
       document.getElementById('adminUserTable').innerHTML =
-        '<tr><td colspan="6" style="text-align:center;color:var(--red)">Error loading users: ' + error.message + '</td></tr>';
+        '<tr><td colspan="7" style="text-align:center;color:var(--red)">Error loading users: ' + error.message + '</td></tr>';
       return;
     }
 
@@ -1672,17 +1672,29 @@
       } else {
         actionBtn = `<button class="price-btn" style="width:auto;padding:5px 10px;font-size:12px" onclick="grantTrial('${p.id}')">Grant Trial</button>`;
       }
+
+      const videoLimit = PLAN_VIDEO_LIMITS[p.plan];
+      const videosUsed = p.trial_videos_used || 0;
+      let videosDisplay = '—';
+      if (videoLimit) {
+        const atLimit = videosUsed >= videoLimit;
+        videosDisplay = atLimit
+          ? `<span style="color:var(--red)">${videosUsed} / ${videoLimit}</span>`
+          : `${videosUsed} / ${videoLimit}`;
+      }
+
       return `<tr>
         <td>${p.full_name || '(no name set)'}</td>
         <td>${p.email || '—'}</td>
         <td style="text-transform:capitalize">${p.plan || 'none'}</td>
         <td style="text-transform:capitalize">${p.role || 'user'}</td>
+        <td>${videosDisplay}</td>
         <td>${expiryDisplay}</td>
         <td>${actionBtn}</td>
       </tr>`;
     }).join('');
 
-    document.getElementById('adminUserTable').innerHTML = rows || '<tr><td colspan="6" style="text-align:center;color:var(--muted)">No users found.</td></tr>';
+    document.getElementById('adminUserTable').innerHTML = rows || '<tr><td colspan="7" style="text-align:center;color:var(--muted)">No users found.</td></tr>';
   }
 
   function filterAdminUsers() {
