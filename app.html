@@ -1008,6 +1008,15 @@
         <div class="progress-bar-bg"><div class="progress-bar-fill" id="voiceCreditsFill"></div></div>
       </div>
 
+      <div class="card" id="shotstackCreditsCard" style="padding:20px;margin-bottom:20px;display:none">
+        <div class="card-header">
+          <span class="card-title">🎬 Shotstack Render Credits (estimated)</span>
+        </div>
+        <div style="font-size:13px;color:var(--muted);margin-bottom:8px" id="shotstackCreditsText">Loading...</div>
+        <div class="progress-bar-bg"><div class="progress-bar-fill" id="shotstackCreditsFill"></div></div>
+        <div style="font-size:11px;color:var(--muted);margin-top:8px">This is SocialFlow's own estimate (1 credit ≈ 1 minute of rendered video) — Shotstack doesn't provide a live balance API, so this may not exactly match your Shotstack dashboard.</div>
+      </div>
+
       <div class="card" style="padding:28px;margin-bottom:20px">
         <div class="form-group" style="margin-bottom:16px">
           <label>Your Idea / Brief</label>
@@ -1274,6 +1283,21 @@
           <div class="stat-card"><div class="stat-top"><span class="stat-icon">👥</span></div><div class="stat-val" id="adminTotalUsers">—</div><div class="stat-label">Total Users</div></div>
           <div class="stat-card"><div class="stat-top"><span class="stat-icon">💎</span></div><div class="stat-val" id="adminProUsers">—</div><div class="stat-label">Pro / Enterprise</div></div>
           <div class="stat-card"><div class="stat-top"><span class="stat-icon">🔑</span></div><div class="stat-val" id="adminCount">—</div><div class="stat-label">Admins</div></div>
+        </div>
+        <div class="card" style="padding:20px;margin-bottom:20px">
+          <div class="card-header"><span class="card-title">🎬 Shotstack Render Credits</span></div>
+          <p style="font-size:12px;color:var(--muted);margin-bottom:14px">SocialFlow tracks this itself (Shotstack has no live balance API). Update the total whenever you recharge/purchase credits on shotstack.io, so the % shown to users stays accurate.</p>
+          <div class="form-grid">
+            <div class="form-group">
+              <label>Credits used so far (auto-tracked)</label>
+              <input id="adminShotstackUsed" value="—" disabled/>
+            </div>
+            <div class="form-group">
+              <label>Total credits purchased</label>
+              <input id="adminShotstackTotal" type="number" step="0.01" placeholder="e.g. 250"/>
+            </div>
+          </div>
+          <button class="save-btn" onclick="saveShotstackTotal()">Update Total</button>
         </div>
         <div class="table-card">
           <div style="padding:16px 16px 0 16px">
@@ -1624,6 +1648,8 @@
   async function loadAdminPanel() {
     document.getElementById('adminGate').style.display = 'none';
     document.getElementById('adminContent').style.display = 'block';
+
+    loadShotstackAdminWidget();
 
     const { data: allProfiles, error } = await supabaseClient
       .from('profiles')
@@ -1990,6 +2016,7 @@ Make it creative, authentic, and ready to post as-is.`;
     }
     if (page === 'videostudio') {
       loadElevenLabsUsage();
+      loadShotstackUsage();
     }
     if (page === 'trends' && !document.getElementById('trendGrid').innerHTML) {
       fetchTrends();
@@ -2253,6 +2280,73 @@ Keep the response concise, actionable, and in a friendly tone.`;
     }
   }
 
+  async function loadShotstackUsage() {
+    try {
+      const { data, error } = await supabaseClient
+        .from('platform_usage')
+        .select('shotstack_credits_used, shotstack_credits_total')
+        .eq('id', 1)
+        .single();
+
+      if (error) throw error;
+
+      const card = document.getElementById('shotstackCreditsCard');
+      card.style.display = 'block';
+
+      const used = data.shotstack_credits_used || 0;
+      const total = data.shotstack_credits_total || 0;
+      const textEl = document.getElementById('shotstackCreditsText');
+      const fill = document.getElementById('shotstackCreditsFill');
+
+      if (!total) {
+        textEl.textContent = used.toFixed(2) + ' credits used so far (total not set — ask an admin to enter it in Admin Panel)';
+        fill.style.width = '0%';
+        return;
+      }
+
+      const pct = Math.min(100, Math.round((used / total) * 100));
+      textEl.textContent = used.toFixed(2) + ' / ' + total.toFixed(2) + ' credits used (' + pct + '%)';
+      fill.style.width = pct + '%';
+      fill.style.background = pct >= 90 ? 'var(--red)' : 'linear-gradient(90deg,var(--accent),var(--accent2))';
+    } catch (err) {
+      console.error('Shotstack usage load error:', err);
+    }
+  }
+
+  async function loadShotstackAdminWidget() {
+    try {
+      const { data, error } = await supabaseClient
+        .from('platform_usage')
+        .select('shotstack_credits_used, shotstack_credits_total')
+        .eq('id', 1)
+        .single();
+      if (error) throw error;
+
+      document.getElementById('adminShotstackUsed').value = (data.shotstack_credits_used || 0).toFixed(2);
+      document.getElementById('adminShotstackTotal').value = data.shotstack_credits_total || '';
+    } catch (err) {
+      console.error('Shotstack admin widget load error:', err);
+    }
+  }
+
+  async function saveShotstackTotal() {
+    const totalInput = document.getElementById('adminShotstackTotal').value;
+    const total = parseFloat(totalInput);
+    if (isNaN(total) || total < 0) {
+      showToast('Please enter a valid number.');
+      return;
+    }
+    const { error } = await supabaseClient
+      .from('platform_usage')
+      .update({ shotstack_credits_total: total, updated_at: new Date().toISOString() })
+      .eq('id', 1);
+    if (error) {
+      showToast('Error saving: ' + error.message);
+    } else {
+      showToast('Shotstack total credits updated!');
+    }
+  }
+
   async function uploadProductImages(files) {
     const urls = [];
     for (let i = 0; i < files.length; i++) {
@@ -2394,6 +2488,7 @@ Keep the response concise, actionable, and in a friendly tone.`;
           localStorage.setItem('sfVideoHistory', JSON.stringify(videoHistory));
           renderVideoHistory();
           loadElevenLabsUsage();
+          loadShotstackUsage();
 
         } else if (statusData.status === 'failed') {
           clearInterval(videoPollInterval);
