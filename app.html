@@ -1074,6 +1074,15 @@
           </select>
         </div>
 
+        <div class="form-group" style="margin-bottom:16px">
+          <label>Script Language</label>
+          <select id="videoLanguage">
+            <option value="English">🇬🇧 English</option>
+            <option value="Hindi">🇮🇳 Hindi</option>
+            <option value="Hinglish (mix of Hindi and English)" selected>🇮🇳+🇬🇧 Hinglish</option>
+          </select>
+        </div>
+
         <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
           <label class="toggle-switch">
             <input type="checkbox" id="videoCaptionsToggle" checked>
@@ -2420,6 +2429,7 @@ Keep the response concise, actionable, and in a friendly tone.`;
           showCaptions: document.getElementById('videoCaptionsToggle').checked,
           productImageUrls,
           voiceId: document.getElementById('videoVoice').value,
+          language: document.getElementById('videoLanguage').value,
           aspectRatio: document.getElementById('videoFormat').value
         })
       });
