@@ -2036,12 +2036,16 @@
     await loadGhSalesLog();
   }
 
+  let ghRequestCounter = 0;
+
   async function generateContent(type, productId) {
     const product = ghProducts.find(p => p.id === productId);
     if (!product) { showToast('Product not found'); return; }
     ghCurrentModalType = type;
     ghCurrentModalProductId = productId;
     ghCurrentModalData = null;
+    ghRequestCounter += 1;
+    const myRequestId = ghRequestCounter;
 
     const titles = { article: '📝 Blog Article', landing: '🎯 Landing Page', script: '🎬 Video Script', posting: '📢 Posting Copy' };
     document.getElementById('ghModalTitle').textContent = titles[type] + ' — ' + product.product_name;
@@ -2076,6 +2080,10 @@
       const data = await res.json();
       if (!res.ok) throw new Error((data.error && data.error.error && data.error.error.message) || data.error || 'Generation failed');
 
+      // Ignore this result if a newer request has been started since (avoids the wrong content flashing into an open modal)
+      if (myRequestId !== ghRequestCounter) return;
+      ghCurrentModalData = null;
+
       if (type === 'article') {
         ghCurrentModalData = data.article;
         document.getElementById('ghModalBody').textContent = data.article;
@@ -2108,6 +2116,7 @@
           </div>`;
       }
     } catch (err) {
+      if (myRequestId !== ghRequestCounter) return;
       document.getElementById('ghModalBody').textContent = '❌ Error: ' + err.message;
     }
   }
