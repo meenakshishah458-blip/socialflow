@@ -347,6 +347,7 @@
     <button class="nav-item" onclick="navigate('competitors',this)"><span class="nav-icon">🎯</span>Competitors</button>
     <div style="margin-top:auto;padding-top:16px;border-top:1px solid var(--border);margin-top:16px;"></div>
     <button class="nav-item" onclick="navigate('admin',this)"><span class="nav-icon">🛡️</span>Admin Panel</button>
+    <button class="nav-item" id="navGrowthHub" style="display:none" onclick="navigate('growthhub',this)"><span class="nav-icon">🚀</span>Growth Hub</button>
     <button class="nav-item" onclick="navigate('faq',this)"><span class="nav-icon">❓</span>FAQ</button>
     <button class="nav-item" onclick="navigate('ratings',this)"><span class="nav-icon">⭐</span>Ratings</button>
     <button class="nav-item" onclick="navigate('settings',this)"><span class="nav-icon">⚙️</span>Settings</button>
@@ -1324,6 +1325,94 @@
       </div>
     </div>
 
+    <div class="page" id="page-growthhub">
+      <div class="page-header"><h1>🚀 Growth Hub</h1><p>Research, content aur sales growth — sab ek jagah (Admin only).</p></div>
+
+      <div class="time-tabs">
+        <button class="time-tab active" onclick="setGhTab(this,'gh-products')">📦 Products</button>
+        <button class="time-tab" onclick="setGhTab(this,'gh-sales')">💰 Sales Log</button>
+        <button class="time-tab" onclick="setGhTab(this,'gh-insights')">🧠 Growth Insights</button>
+      </div>
+
+      <div class="gh-section" id="gh-products">
+        <div class="card" style="padding:20px;margin-bottom:20px">
+          <div class="card-header"><span class="card-title">Add Product</span></div>
+          <div class="form-grid">
+            <div class="form-group"><label>Product Name</label><input id="ghProductName" placeholder="e.g. AI Video Creator Pro"/></div>
+            <div class="form-group"><label>Niche</label><input id="ghProductNiche" placeholder="e.g. AI video tools"/></div>
+            <div class="form-group"><label>Platform</label>
+              <select id="ghProductPlatform">
+                <option value="warriorplus">WarriorPlus</option>
+                <option value="jvzoo">JVZoo</option>
+                <option value="clickbank">ClickBank</option>
+                <option value="other">Other</option>
+              </select>
+            </div>
+            <div class="form-group"><label>JV / Sales Page Link</label><input id="ghProductJvLink" placeholder="https://..."/></div>
+            <div class="form-group"><label>Commission %</label><input id="ghProductCommission" type="number" step="0.01" placeholder="e.g. 50"/></div>
+            <div class="form-group"><label>Launch Date</label><input id="ghProductLaunchDate" type="date"/></div>
+            <div class="form-group"><label>Approval Status</label>
+              <select id="ghProductApproval">
+                <option value="not_requested">Not Requested</option>
+                <option value="pending">Pending</option>
+                <option value="approved">Approved</option>
+                <option value="rejected">Rejected</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-group" style="margin-top:16px"><label>Notes</label><textarea id="ghProductNotes" placeholder="Any notes..."></textarea></div>
+          <button class="save-btn" onclick="addProduct()">+ Add Product</button>
+        </div>
+
+        <div class="table-card">
+          <table>
+            <thead><tr><th>Product</th><th>Niche</th><th>Platform</th><th>Commission</th><th>Launch</th><th>Approval</th><th>Content</th><th>Action</th></tr></thead>
+            <tbody id="ghProductsTable"><tr><td colspan="8" style="text-align:center;color:var(--muted)">Loading...</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="gh-section" id="gh-sales" style="display:none">
+        <div class="card" style="padding:20px;margin-bottom:20px">
+          <div class="card-header"><span class="card-title">Log a Sale</span></div>
+          <div class="form-grid">
+            <div class="form-group"><label>Product</label><select id="ghSaleProduct"></select></div>
+            <div class="form-group"><label>Sale Date</label><input id="ghSaleDate" type="date"/></div>
+            <div class="form-group"><label>Units Sold</label><input id="ghSaleUnits" type="number" value="1"/></div>
+            <div class="form-group"><label>Revenue (₹)</label><input id="ghSaleRevenue" type="number" step="0.01" placeholder="e.g. 999"/></div>
+            <div class="form-group"><label>Traffic Source</label>
+              <select id="ghSaleSource">
+                <option value="youtube">YouTube</option>
+                <option value="facebook">Facebook</option>
+                <option value="email">Email</option>
+                <option value="blog_seo">Blog / SEO</option>
+                <option value="google_sites">Google Sites</option>
+                <option value="other">Other</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-group" style="margin-top:16px"><label>Notes</label><textarea id="ghSaleNotes" placeholder="Any notes..."></textarea></div>
+          <button class="save-btn" onclick="addSaleEntry()">+ Log Sale</button>
+        </div>
+
+        <div class="table-card">
+          <table>
+            <thead><tr><th>Product</th><th>Date</th><th>Units</th><th>Revenue</th><th>Source</th><th>Action</th></tr></thead>
+            <tbody id="ghSalesTable"><tr><td colspan="6" style="text-align:center;color:var(--muted)">Loading...</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="gh-section" id="gh-insights" style="display:none">
+        <div class="card" style="padding:24px">
+          <div class="card-header"><span class="card-title">🧠 AI Growth Insights</span>
+            <button class="gen-btn" onclick="generateGrowthInsights()">Generate Insights</button>
+          </div>
+          <div id="ghInsightsContent" style="color:var(--muted);font-size:14px">Click "Generate Insights" to analyze your sales data and get recommendations.</div>
+        </div>
+      </div>
+    </div>
+
     <div class="page" id="page-faq">
       <div class="page-header"><h1>FAQ</h1><p>Frequently asked questions.</p></div>
       <div class="card" style="padding:32px">
@@ -1375,6 +1464,21 @@
     <div class="modal-footer">
       <button class="modal-cancel" onclick="closeModal()">Cancel</button>
       <button class="modal-post" onclick="publishPost()">Publish Now</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="growthModal">
+  <div class="modal" style="width:700px">
+    <div class="modal-header">
+      <h2 id="ghModalTitle">Generated Content</h2>
+      <button class="close-btn" onclick="closeGrowthModal()">×</button>
+    </div>
+    <div id="ghModalBody" style="max-height:60vh;overflow-y:auto;font-size:13px;line-height:1.6;white-space:pre-wrap;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:16px;margin-bottom:16px">Loading...</div>
+    <div class="modal-footer">
+      <button class="modal-cancel" onclick="closeGrowthModal()">Close</button>
+      <button class="copy-btn" onclick="copyGrowthModalContent()">📋 Copy</button>
+      <button class="modal-post" onclick="saveGrowthModalContent()">💾 Save to Product</button>
     </div>
   </div>
 </div>
@@ -1436,6 +1540,8 @@
 
     if (profile.role === 'admin') {
       loadAdminPanel();
+      const ghNav = document.getElementById('navGrowthHub');
+      if (ghNav) ghNav.style.display = 'flex';
     } else {
       document.getElementById('adminGateMsg').textContent = "You don't have admin access. Contact your workspace owner if you believe this is a mistake.";
     }
@@ -1772,6 +1878,294 @@
     }
   }
 
+  // ===== Growth Hub =====
+  let ghLoaded = false;
+  let ghProducts = [];
+  let ghSalesLog = [];
+  let ghCurrentModalType = null;
+  let ghCurrentModalProductId = null;
+  let ghCurrentModalData = null;
+
+  function setGhTab(btn, id) {
+    document.querySelectorAll('#page-growthhub .time-tab').forEach(t => t.classList.remove('active'));
+    btn.classList.add('active');
+    document.querySelectorAll('.gh-section').forEach(s => s.style.display = 'none');
+    document.getElementById(id).style.display = 'block';
+  }
+
+  async function loadGrowthHub() {
+    await loadGhProducts();
+    await loadGhSalesLog();
+    populateGhSaleProductSelect();
+  }
+
+  async function loadGhProducts() {
+    const { data, error } = await supabaseClient.from('sales_products').select('*').order('created_at', { ascending: false });
+    if (error) {
+      document.getElementById('ghProductsTable').innerHTML = '<tr><td colspan="8" style="text-align:center;color:var(--red)">Error: ' + error.message + '</td></tr>';
+      return;
+    }
+    ghProducts = data || [];
+    renderGhProductsTable();
+  }
+
+  function renderGhProductsTable() {
+    if (!ghProducts.length) {
+      document.getElementById('ghProductsTable').innerHTML = '<tr><td colspan="8" style="text-align:center;color:var(--muted)">No products yet. Add your first one above.</td></tr>';
+      return;
+    }
+    const approvalColors = { approved: 'var(--green)', rejected: 'var(--red)', pending: 'var(--yellow)', not_requested: 'var(--muted)' };
+    document.getElementById('ghProductsTable').innerHTML = ghProducts.map(p => `
+      <tr>
+        <td>${p.product_name}${p.jv_link ? ` <a href="${p.jv_link}" target="_blank" style="color:var(--accent2);font-size:11px">🔗</a>` : ''}</td>
+        <td>${p.niche || '—'}</td>
+        <td style="text-transform:capitalize">${p.platform || '—'}</td>
+        <td>${p.commission_percent ? p.commission_percent + '%' : '—'}</td>
+        <td>${p.launch_date || '—'}</td>
+        <td><span style="color:${approvalColors[p.approval_status] || 'var(--muted)'};text-transform:capitalize;font-size:12px;font-weight:600">${(p.approval_status || 'not_requested').replace('_', ' ')}</span></td>
+        <td>
+          <div style="display:flex;gap:4px;flex-wrap:wrap">
+            <button class="copy-btn" style="padding:5px 8px;font-size:11px" title="Blog Article" onclick="generateContent('article','${p.id}')">📝</button>
+            <button class="copy-btn" style="padding:5px 8px;font-size:11px" title="Landing Page" onclick="generateContent('landing','${p.id}')">🎯</button>
+            <button class="copy-btn" style="padding:5px 8px;font-size:11px" title="Video Script" onclick="generateContent('script','${p.id}')">🎬</button>
+            <button class="copy-btn" style="padding:5px 8px;font-size:11px" title="Posting Copy" onclick="generateContent('posting','${p.id}')">📢</button>
+          </div>
+        </td>
+        <td><button class="copy-btn" style="padding:5px 8px;font-size:11px;color:var(--red)" onclick="deleteProduct('${p.id}')">🗑️</button></td>
+      </tr>
+    `).join('');
+  }
+
+  async function addProduct() {
+    const name = document.getElementById('ghProductName').value.trim();
+    if (!name) { showToast('Product name is required'); return; }
+    const payload = {
+      product_name: name,
+      niche: document.getElementById('ghProductNiche').value.trim() || null,
+      platform: document.getElementById('ghProductPlatform').value,
+      jv_link: document.getElementById('ghProductJvLink').value.trim() || null,
+      commission_percent: parseFloat(document.getElementById('ghProductCommission').value) || null,
+      launch_date: document.getElementById('ghProductLaunchDate').value || null,
+      approval_status: document.getElementById('ghProductApproval').value,
+      notes: document.getElementById('ghProductNotes').value.trim() || null
+    };
+    const { error } = await supabaseClient.from('sales_products').insert(payload);
+    if (error) { showToast('Error: ' + error.message); return; }
+    showToast('Product added! 🎉');
+    document.getElementById('ghProductName').value = '';
+    document.getElementById('ghProductNiche').value = '';
+    document.getElementById('ghProductJvLink').value = '';
+    document.getElementById('ghProductCommission').value = '';
+    document.getElementById('ghProductLaunchDate').value = '';
+    document.getElementById('ghProductNotes').value = '';
+    await loadGhProducts();
+    populateGhSaleProductSelect();
+  }
+
+  async function deleteProduct(id) {
+    if (!confirm('Delete this product? This will also delete its sales log entries and generated content.')) return;
+    const { error } = await supabaseClient.from('sales_products').delete().eq('id', id);
+    if (error) { showToast('Error: ' + error.message); return; }
+    showToast('Product deleted.');
+    await loadGhProducts();
+    await loadGhSalesLog();
+    populateGhSaleProductSelect();
+  }
+
+  function populateGhSaleProductSelect() {
+    const sel = document.getElementById('ghSaleProduct');
+    if (!sel) return;
+    sel.innerHTML = ghProducts.length
+      ? ghProducts.map(p => `<option value="${p.id}">${p.product_name}</option>`).join('')
+      : '<option value="">Add a product first</option>';
+  }
+
+  async function loadGhSalesLog() {
+    const { data, error } = await supabaseClient.from('sales_log').select('*').order('sale_date', { ascending: false });
+    if (error) {
+      document.getElementById('ghSalesTable').innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--red)">Error: ' + error.message + '</td></tr>';
+      return;
+    }
+    ghSalesLog = data || [];
+    renderGhSalesTable();
+  }
+
+  function renderGhSalesTable() {
+    if (!ghSalesLog.length) {
+      document.getElementById('ghSalesTable').innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--muted)">No sales logged yet.</td></tr>';
+      return;
+    }
+    document.getElementById('ghSalesTable').innerHTML = ghSalesLog.map(s => {
+      const product = ghProducts.find(p => p.id === s.product_id);
+      return `<tr>
+        <td>${product ? product.product_name : 'Unknown'}</td>
+        <td>${s.sale_date}</td>
+        <td>${s.units_sold}</td>
+        <td>₹${Number(s.revenue).toFixed(2)}</td>
+        <td style="text-transform:capitalize">${(s.traffic_source || '—').replace('_', ' ')}</td>
+        <td><button class="copy-btn" style="padding:5px 8px;font-size:11px;color:var(--red)" onclick="deleteSaleEntry('${s.id}')">🗑️</button></td>
+      </tr>`;
+    }).join('');
+  }
+
+  async function addSaleEntry() {
+    const productId = document.getElementById('ghSaleProduct').value;
+    if (!productId) { showToast('Add a product first'); return; }
+    const payload = {
+      product_id: productId,
+      sale_date: document.getElementById('ghSaleDate').value || new Date().toISOString().split('T')[0],
+      units_sold: parseInt(document.getElementById('ghSaleUnits').value) || 1,
+      revenue: parseFloat(document.getElementById('ghSaleRevenue').value) || 0,
+      traffic_source: document.getElementById('ghSaleSource').value,
+      notes: document.getElementById('ghSaleNotes').value.trim() || null
+    };
+    const { error } = await supabaseClient.from('sales_log').insert(payload);
+    if (error) { showToast('Error: ' + error.message); return; }
+    showToast('Sale logged! 💰');
+    document.getElementById('ghSaleUnits').value = '1';
+    document.getElementById('ghSaleRevenue').value = '';
+    document.getElementById('ghSaleNotes').value = '';
+    await loadGhSalesLog();
+  }
+
+  async function deleteSaleEntry(id) {
+    if (!confirm('Delete this sale entry?')) return;
+    const { error } = await supabaseClient.from('sales_log').delete().eq('id', id);
+    if (error) { showToast('Error: ' + error.message); return; }
+    showToast('Entry deleted.');
+    await loadGhSalesLog();
+  }
+
+  async function generateContent(type, productId) {
+    const product = ghProducts.find(p => p.id === productId);
+    if (!product) { showToast('Product not found'); return; }
+    ghCurrentModalType = type;
+    ghCurrentModalProductId = productId;
+    ghCurrentModalData = null;
+
+    const titles = { article: '📝 Blog Article', landing: '🎯 Landing Page', script: '🎬 Video Script', posting: '📢 Posting Copy' };
+    document.getElementById('ghModalTitle').textContent = titles[type] + ' — ' + product.product_name;
+    document.getElementById('ghModalBody').textContent = 'Generating... this can take 15-30 seconds ⏳';
+    document.getElementById('growthModal').classList.add('open');
+
+    try {
+      const { data: { session } } = await supabaseClient.auth.getSession();
+      let endpoint, body;
+
+      if (type === 'article') {
+        endpoint = 'generate-blog-article';
+        body = { product_name: product.product_name, niche: product.niche, jv_link: product.jv_link };
+      } else if (type === 'landing') {
+        endpoint = 'generate-landing-page';
+        body = { product_name: product.product_name, niche: product.niche, jv_link: product.jv_link };
+      } else if (type === 'script') {
+        endpoint = 'generate-video-script';
+        body = { product_name: product.product_name, niche: product.niche, video_length_seconds: 60, aspect_ratio: '9:16', script_language: 'English' };
+        const { data: pipeline } = await supabaseClient.from('content_pipeline').select('blog_article').eq('product_id', productId).maybeSingle();
+        if (pipeline && pipeline.blog_article) body.blog_article = pipeline.blog_article;
+      } else if (type === 'posting') {
+        endpoint = 'generate-posting-copy';
+        body = { product_name: product.product_name, niche: product.niche, affiliate_link: product.jv_link };
+      }
+
+      const res = await fetch(`${SUPABASE_URL}/functions/v1/${endpoint}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session.access_token}` },
+        body: JSON.stringify(body)
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error((data.error && data.error.error && data.error.error.message) || data.error || 'Generation failed');
+
+      if (type === 'article') {
+        ghCurrentModalData = data.article;
+        document.getElementById('ghModalBody').textContent = data.article;
+      } else if (type === 'landing') {
+        ghCurrentModalData = data.html;
+        document.getElementById('ghModalBody').textContent = data.html;
+      } else if (type === 'script') {
+        ghCurrentModalData = data.script;
+        const scenes = data.script.scenes || [];
+        document.getElementById('ghModalBody').innerHTML =
+          `<div style="margin-bottom:12px"><b>${data.script.title || ''}</b> (${data.script.total_duration_seconds || '?'}s)</div>` +
+          scenes.map(sc => `<div style="margin-bottom:12px;padding-bottom:12px;border-bottom:1px solid var(--border)">
+            <div style="color:var(--accent2);font-weight:600;margin-bottom:4px">Scene ${sc.scene_number} (${sc.duration_seconds}s)</div>
+            <div style="margin-bottom:4px"><b>Voiceover:</b> ${sc.voiceover_text}</div>
+            <div style="margin-bottom:4px;color:var(--muted)"><b>Visual:</b> ${sc.visual_prompt}</div>
+            ${sc.on_screen_text ? `<div style="color:var(--muted)"><b>Text overlay:</b> ${sc.on_screen_text}</div>` : ''}
+          </div>`).join('');
+      } else if (type === 'posting') {
+        ghCurrentModalData = data.posting_copy;
+        const pc = data.posting_copy;
+        document.getElementById('ghModalBody').innerHTML =
+          `<div style="margin-bottom:16px"><div style="color:var(--accent2);font-weight:600;margin-bottom:6px">📺 YouTube</div>
+            <div style="margin-bottom:6px"><b>Title:</b> ${pc.youtube.title}</div>
+            <div style="margin-bottom:6px;white-space:pre-wrap"><b>Description:</b> ${pc.youtube.description}</div>
+            <div><b>Tags:</b> ${(pc.youtube.tags || []).join(', ')}</div>
+          </div>
+          <div><div style="color:var(--accent2);font-weight:600;margin-bottom:6px">📘 Facebook</div>
+            <div style="margin-bottom:6px;white-space:pre-wrap"><b>Caption:</b> ${pc.facebook.caption}</div>
+            <div><b>Hashtags:</b> ${(pc.facebook.hashtags || []).join(', ')}</div>
+          </div>`;
+      }
+    } catch (err) {
+      document.getElementById('ghModalBody').textContent = '❌ Error: ' + err.message;
+    }
+  }
+
+  function closeGrowthModal() {
+    document.getElementById('growthModal').classList.remove('open');
+  }
+
+  function copyGrowthModalContent() {
+    let textToCopy = '';
+    if (ghCurrentModalType === 'article' || ghCurrentModalType === 'landing') {
+      textToCopy = ghCurrentModalData || '';
+    } else {
+      textToCopy = JSON.stringify(ghCurrentModalData, null, 2);
+    }
+    navigator.clipboard.writeText(textToCopy).then(() => showToast('Copied to clipboard! 📋')).catch(() => showToast('Could not copy — please copy manually.'));
+  }
+
+  async function saveGrowthModalContent() {
+    if (!ghCurrentModalData || !ghCurrentModalProductId) { showToast('Nothing to save yet'); return; }
+    const fieldMap = { article: 'blog_article', landing: 'landing_page_html', script: 'video_script', posting: 'posting_copy' };
+    const field = fieldMap[ghCurrentModalType];
+    const { data: existing } = await supabaseClient.from('content_pipeline').select('id').eq('product_id', ghCurrentModalProductId).maybeSingle();
+    let error;
+    if (existing) {
+      ({ error } = await supabaseClient.from('content_pipeline').update({ [field]: ghCurrentModalData, updated_at: new Date().toISOString() }).eq('id', existing.id));
+    } else {
+      ({ error } = await supabaseClient.from('content_pipeline').insert({ product_id: ghCurrentModalProductId, [field]: ghCurrentModalData }));
+    }
+    if (error) { showToast('Error saving: ' + error.message); return; }
+    showToast('Saved to product! 💾');
+  }
+
+  async function generateGrowthInsights() {
+    document.getElementById('ghInsightsContent').innerHTML = 'Analyzing your sales data... ⏳';
+    try {
+      const { data: { session } } = await supabaseClient.auth.getSession();
+      const res = await fetch(`${SUPABASE_URL}/functions/v1/generate-growth-insights`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session.access_token}` },
+        body: JSON.stringify({})
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error((data.error && data.error.error && data.error.error.message) || data.error || 'Failed to generate insights');
+      const ins = data.insights;
+      document.getElementById('ghInsightsContent').innerHTML = `
+        <div style="margin-bottom:16px;font-size:14px;line-height:1.6">${ins.summary}</div>
+        ${ins.top_traffic_source ? `<div style="margin-bottom:8px"><b>🏆 Top Traffic Source:</b> ${ins.top_traffic_source}</div>` : ''}
+        ${ins.top_product ? `<div style="margin-bottom:16px"><b>⭐ Top Product:</b> ${ins.top_product}</div>` : ''}
+        ${ins.recommendations && ins.recommendations.length ? `<div style="margin-bottom:16px"><b>✅ Recommendations:</b><ul style="margin-top:8px;padding-left:20px;display:flex;flex-direction:column;gap:6px">${ins.recommendations.map(r => `<li>${r}</li>`).join('')}</ul></div>` : ''}
+        ${ins.warnings && ins.warnings.length ? `<div><b style="color:var(--yellow)">⚠️ Warnings:</b><ul style="margin-top:8px;padding-left:20px;display:flex;flex-direction:column;gap:6px;color:var(--yellow)">${ins.warnings.map(w => `<li>${w}</li>`).join('')}</ul></div>` : ''}
+      `;
+    } catch (err) {
+      document.getElementById('ghInsightsContent').innerHTML = '❌ Error: ' + err.message;
+    }
+  }
+  // ===== End Growth Hub =====
+
   initAuth();
 </script>
 
@@ -2029,6 +2423,10 @@ Make it creative, authentic, and ready to post as-is.`;
     }
     if (page === 'trends' && !document.getElementById('trendGrid').innerHTML) {
       fetchTrends();
+    }
+    if (page === 'growthhub' && !ghLoaded) {
+      ghLoaded = true;
+      loadGrowthHub();
     }
   }
 
