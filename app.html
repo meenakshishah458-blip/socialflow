@@ -1475,9 +1475,17 @@
       <button class="close-btn" onclick="closeGrowthModal()">×</button>
     </div>
     <div id="ghModalBody" style="max-height:60vh;overflow-y:auto;font-size:13px;line-height:1.6;white-space:pre-wrap;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:16px;margin-bottom:16px">Loading...</div>
+    <div id="ghAutoSendRow" style="display:none;align-items:center;gap:12px;margin-bottom:16px">
+      <label class="toggle-switch">
+        <input type="checkbox" id="ghAutoSendToggle" checked>
+        <span class="toggle-slider"></span>
+      </label>
+      <span style="font-size:13px;color:var(--text)">Auto-send to Video Studio when ready</span>
+    </div>
     <div class="modal-footer">
       <button class="modal-cancel" onclick="closeGrowthModal()">Close</button>
       <button class="copy-btn" onclick="copyGrowthModalContent()">📋 Copy</button>
+      <button class="copy-btn" id="ghSendToStudioBtn" style="display:none" onclick="sendScriptToVideoStudio(ghCurrentModalData)">🎬 Send to Video Studio</button>
       <button class="modal-post" onclick="saveGrowthModalContent()">💾 Save to Product</button>
     </div>
   </div>
@@ -2050,6 +2058,8 @@
     const titles = { article: '📝 Blog Article', landing: '🎯 Landing Page', script: '🎬 Video Script', posting: '📢 Posting Copy' };
     document.getElementById('ghModalTitle').textContent = titles[type] + ' — ' + product.product_name;
     document.getElementById('ghModalBody').textContent = 'Generating... this can take 15-30 seconds ⏳';
+    document.getElementById('ghAutoSendRow').style.display = (type === 'script') ? 'flex' : 'none';
+    document.getElementById('ghSendToStudioBtn').style.display = (type === 'script') ? 'inline-block' : 'none';
     document.getElementById('growthModal').classList.add('open');
 
     try {
@@ -2101,6 +2111,10 @@
             <div style="margin-bottom:4px;color:var(--muted)"><b>Visual:</b> ${sc.visual_prompt}</div>
             ${sc.on_screen_text ? `<div style="color:var(--muted)"><b>Text overlay:</b> ${sc.on_screen_text}</div>` : ''}
           </div>`).join('');
+        const autoSend = document.getElementById('ghAutoSendToggle');
+        if (autoSend && autoSend.checked) {
+          sendScriptToVideoStudio(data.script);
+        }
       } else if (type === 'posting') {
         ghCurrentModalData = data.posting_copy;
         const pc = data.posting_copy;
@@ -2148,6 +2162,27 @@
     }
     if (error) { showToast('Error saving: ' + error.message); return; }
     showToast('Saved to product! 💾');
+  }
+
+  function sendScriptToVideoStudio(script) {
+    if (!script || !script.scenes || !script.scenes.length) { showToast('No script to send yet'); return; }
+    const briefText = (script.title ? script.title + '\n\n' : '') +
+      script.scenes.map(sc => sc.voiceover_text).join(' ');
+
+    const studioBtn = Array.from(document.querySelectorAll('.nav-item')).find(b => b.textContent.trim() === 'Video Studio');
+    navigate('videostudio', studioBtn);
+
+    document.getElementById('videoBrief').value = briefText.trim();
+
+    const durationOptions = [15, 30, 60, 120, 180];
+    const target = script.total_duration_seconds || 60;
+    const closest = durationOptions.reduce((a, b) => Math.abs(b - target) < Math.abs(a - target) ? b : a);
+    document.getElementById('videoDuration').value = String(closest);
+    document.getElementById('videoFormat').value = '9:16';
+
+    closeGrowthModal();
+    showToast('Script sent to Video Studio! Pick a voice & language, then hit Generate. 🎬');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
   async function generateGrowthInsights() {
