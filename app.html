@@ -1360,7 +1360,12 @@
               </select>
             </div>
           </div>
-          <div class="form-group" style="margin-top:16px"><label>Notes</label><textarea id="ghProductNotes" placeholder="Any notes..."></textarea></div>
+          <div class="form-group" style="margin-top:16px"><label>Notes / Key Features</label><textarea id="ghProductNotes" placeholder="Any notes or key features to highlight..."></textarea></div>
+          <div class="form-group" style="margin-top:16px">
+            <label>Product Images / Screenshots (optional — AI will use these to write more authentic content across all 4 experts)</label>
+            <input type="file" id="ghProductImages" accept="image/*" multiple onchange="handleGhProductImageSelect(this)" style="width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:10px 12px;font-size:14px"/>
+            <div id="ghProductImagePreview" style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap"></div>
+          </div>
           <button class="save-btn" onclick="addProduct()">+ Add Product</button>
         </div>
 
@@ -1467,6 +1472,8 @@
     </div>
   </div>
 </div>
+
+<input type="file" id="ghExistingProductImageInput" accept="image/*" multiple style="display:none" onchange="handleExistingProductImageUpload(this)"/>
 
 <div class="modal-overlay" id="growthModal">
   <div class="modal" style="width:700px">
@@ -1893,6 +1900,33 @@
   let ghCurrentModalType = null;
   let ghCurrentModalProductId = null;
   let ghCurrentModalData = null;
+  let ghSelectedProductImageFiles = [];
+  let ghImagesTargetProductId = null;
+
+  function handleGhProductImageSelect(input) {
+    if (input.files && input.files.length) {
+      Array.from(input.files).forEach(file => ghSelectedProductImageFiles.push(file));
+    }
+    input.value = '';
+    renderGhProductImagePreview();
+  }
+
+  function renderGhProductImagePreview() {
+    const preview = document.getElementById('ghProductImagePreview');
+    if (!preview) return;
+    preview.innerHTML = ghSelectedProductImageFiles.map((file, idx) => {
+      const url = URL.createObjectURL(file);
+      return `<div style="position:relative">
+        <img src="${url}" style="width:56px;height:56px;border-radius:8px;object-fit:cover;border:1px solid var(--border)"/>
+        <button onclick="removeGhSelectedImage(${idx})" style="position:absolute;top:-6px;right:-6px;background:var(--red);color:#fff;border:none;border-radius:50%;width:18px;height:18px;font-size:11px;cursor:pointer;line-height:1">×</button>
+      </div>`;
+    }).join('');
+  }
+
+  function removeGhSelectedImage(idx) {
+    ghSelectedProductImageFiles.splice(idx, 1);
+    renderGhProductImagePreview();
+  }
 
   function setGhTab(btn, id) {
     document.querySelectorAll('#page-growthhub .time-tab').forEach(t => t.classList.remove('active'));
@@ -1923,9 +1957,14 @@
       return;
     }
     const approvalColors = { approved: 'var(--green)', rejected: 'var(--red)', pending: 'var(--yellow)', not_requested: 'var(--muted)' };
-    document.getElementById('ghProductsTable').innerHTML = ghProducts.map(p => `
+    document.getElementById('ghProductsTable').innerHTML = ghProducts.map(p => {
+      const imgs = Array.isArray(p.image_urls) ? p.image_urls : [];
+      const thumb = imgs.length
+        ? `<img src="${imgs[0]}" style="width:28px;height:28px;border-radius:6px;object-fit:cover;vertical-align:middle;margin-right:6px;border:1px solid var(--border)"/>`
+        : '';
+      return `
       <tr>
-        <td>${p.product_name}${p.jv_link ? ` <a href="${p.jv_link}" target="_blank" style="color:var(--accent2);font-size:11px">🔗</a>` : ''}</td>
+        <td>${thumb}${p.product_name}${p.jv_link ? ` <a href="${p.jv_link}" target="_blank" style="color:var(--accent2);font-size:11px">🔗</a>` : ''}</td>
         <td>${p.niche || '—'}</td>
         <td style="text-transform:capitalize">${p.platform || '—'}</td>
         <td>${p.commission_percent ? p.commission_percent + '%' : '—'}</td>
@@ -1937,16 +1976,30 @@
             <button class="copy-btn" style="padding:5px 8px;font-size:11px" title="Landing Page" onclick="generateContent('landing','${p.id}')">🎯</button>
             <button class="copy-btn" style="padding:5px 8px;font-size:11px" title="Video Script" onclick="generateContent('script','${p.id}')">🎬</button>
             <button class="copy-btn" style="padding:5px 8px;font-size:11px" title="Posting Copy" onclick="generateContent('posting','${p.id}')">📢</button>
+            <button class="copy-btn" style="padding:5px 8px;font-size:11px" title="Add/Update Images (${imgs.length})" onclick="triggerAddImagesToProduct('${p.id}')">🖼️${imgs.length ? ' ' + imgs.length : ''}</button>
           </div>
         </td>
         <td><button class="copy-btn" style="padding:5px 8px;font-size:11px;color:var(--red)" onclick="deleteProduct('${p.id}')">🗑️</button></td>
       </tr>
-    `).join('');
+    `;
+    }).join('');
   }
 
   async function addProduct() {
     const name = document.getElementById('ghProductName').value.trim();
     if (!name) { showToast('Product name is required'); return; }
+
+    let imageUrls = [];
+    if (ghSelectedProductImageFiles.length) {
+      try {
+        showToast('Uploading images... 🖼️');
+        imageUrls = await uploadProductImages(ghSelectedProductImageFiles);
+      } catch (err) {
+        showToast('Image upload failed: ' + err.message);
+        return;
+      }
+    }
+
     const payload = {
       product_name: name,
       niche: document.getElementById('ghProductNiche').value.trim() || null,
@@ -1955,7 +2008,8 @@
       commission_percent: parseFloat(document.getElementById('ghProductCommission').value) || null,
       launch_date: document.getElementById('ghProductLaunchDate').value || null,
       approval_status: document.getElementById('ghProductApproval').value,
-      notes: document.getElementById('ghProductNotes').value.trim() || null
+      notes: document.getElementById('ghProductNotes').value.trim() || null,
+      image_urls: imageUrls
     };
     const { error } = await supabaseClient.from('sales_products').insert(payload);
     if (error) { showToast('Error: ' + error.message); return; }
@@ -1966,8 +2020,37 @@
     document.getElementById('ghProductCommission').value = '';
     document.getElementById('ghProductLaunchDate').value = '';
     document.getElementById('ghProductNotes').value = '';
+    ghSelectedProductImageFiles = [];
+    renderGhProductImagePreview();
     await loadGhProducts();
     populateGhSaleProductSelect();
+  }
+
+  function triggerAddImagesToProduct(productId) {
+    ghImagesTargetProductId = productId;
+    const hidden = document.getElementById('ghExistingProductImageInput');
+    hidden.value = '';
+    hidden.click();
+  }
+
+  async function handleExistingProductImageUpload(input) {
+    if (!input.files || !input.files.length || !ghImagesTargetProductId) return;
+    const files = Array.from(input.files);
+    const product = ghProducts.find(p => p.id === ghImagesTargetProductId);
+    if (!product) { showToast('Product not found'); return; }
+
+    try {
+      showToast('Uploading images... 🖼️');
+      const newUrls = await uploadProductImages(files);
+      const existingUrls = Array.isArray(product.image_urls) ? product.image_urls : [];
+      const combinedUrls = existingUrls.concat(newUrls);
+      const { error } = await supabaseClient.from('sales_products').update({ image_urls: combinedUrls }).eq('id', ghImagesTargetProductId);
+      if (error) { showToast('Error saving images: ' + error.message); return; }
+      showToast('Images added! 🖼️');
+      await loadGhProducts();
+    } catch (err) {
+      showToast('Image upload failed: ' + err.message);
+    }
   }
 
   async function deleteProduct(id) {
@@ -2068,18 +2151,18 @@
 
       if (type === 'article') {
         endpoint = 'generate-blog-article';
-        body = { product_name: product.product_name, niche: product.niche, jv_link: product.jv_link };
+        body = { product_name: product.product_name, niche: product.niche, jv_link: product.jv_link, key_features: product.notes, image_urls: product.image_urls };
       } else if (type === 'landing') {
         endpoint = 'generate-landing-page';
-        body = { product_name: product.product_name, niche: product.niche, jv_link: product.jv_link };
+        body = { product_name: product.product_name, niche: product.niche, jv_link: product.jv_link, key_features: product.notes, image_urls: product.image_urls };
       } else if (type === 'script') {
         endpoint = 'generate-video-script';
-        body = { product_name: product.product_name, niche: product.niche, video_length_seconds: 60, aspect_ratio: '9:16', script_language: 'English' };
+        body = { product_name: product.product_name, niche: product.niche, video_length_seconds: 60, aspect_ratio: '9:16', script_language: 'English', key_features: product.notes, image_urls: product.image_urls };
         const { data: pipeline } = await supabaseClient.from('content_pipeline').select('blog_article').eq('product_id', productId).maybeSingle();
         if (pipeline && pipeline.blog_article) body.blog_article = pipeline.blog_article;
       } else if (type === 'posting') {
         endpoint = 'generate-posting-copy';
-        body = { product_name: product.product_name, niche: product.niche, affiliate_link: product.jv_link };
+        body = { product_name: product.product_name, niche: product.niche, affiliate_link: product.jv_link, key_features: product.notes, image_urls: product.image_urls };
       }
 
       const res = await fetch(`${SUPABASE_URL}/functions/v1/${endpoint}`, {
